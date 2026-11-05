@@ -1,4 +1,5 @@
 """统一测试入口：CNF数据、遗传算子、三餐约束及PyTorch评分。"""
+
 import copy
 import csv
 import json
@@ -14,8 +15,21 @@ import torch
 
 from cnf_data import NUTRIENT_MAP, csv_rows, load_cnf_data
 from device_utils import resolve_device
-from ga_models import (ALL_FIELDS, EPS, NUTRIENTS, UL, WEIGHTS, Config, Dish,
-                       Evaluation, Food, Fruit, Individual, Meal, Person)
+from ga_models import (
+    ALL_FIELDS,
+    EPS,
+    NUTRIENTS,
+    UL,
+    WEIGHTS,
+    Config,
+    Dish,
+    Evaluation,
+    Food,
+    Fruit,
+    Individual,
+    Meal,
+    Person,
+)
 from genetic_operators import crossover as crossover_operator
 from genetic_operators import mutation, parent_selection, survivor_selection
 from meal_ga import MealGA, bounded_fruit_weights, load_foods
@@ -28,19 +42,30 @@ class CNFDataTests(unittest.TestCase):
     def setUpClass(cls):
         cls.dataset = ROOT / "dataset"
         cls.foods, cls.metadata = load_foods(cls.dataset)
-        cls.candidates = json.loads((cls.dataset / "candidates.json").read_text(encoding="utf-8"))
+        cls.candidates = json.loads(
+            (cls.dataset / "candidates.json").read_text(encoding="utf-8")
+        )
         cls.codes = {f.id for f in cls.foods}
         needed = {code for code, _ in NUTRIENT_MAP.values()}
         # Small fixtures are selected from the real files; mutation tests never
         # change the repository's original CNF CSVs.
         cls.tables = {}
-        for name in ("food_name.csv", "food_source.csv", "cnf_food_group.csv",
-                     "nutrient_name.csv", "nutrient_amount.csv"):
+        for name in (
+            "food_name.csv",
+            "food_source.csv",
+            "cnf_food_group.csv",
+            "nutrient_name.csv",
+            "nutrient_amount.csv",
+        ):
             rows = csv_rows(cls.dataset / name, set())
             if name == "food_name.csv":
                 rows = (r for r in rows if r["Food_Code"] in cls.codes)
             elif name == "nutrient_amount.csv":
-                rows = (r for r in rows if r["Food_Code"] in cls.codes and r["Nutrient_Code"] in needed)
+                rows = (
+                    r
+                    for r in rows
+                    if r["Food_Code"] in cls.codes and r["Nutrient_Code"] in needed
+                )
             cls.tables[name] = list(rows)
 
     def setUp(self):
@@ -49,7 +74,9 @@ class CNFDataTests(unittest.TestCase):
         self.path = Path(self.temp.name)
         for name, rows in self.tables.items():
             self.write_table(name, rows)
-        (self.path / "candidates.json").write_text(json.dumps(self.candidates), encoding="utf-8")
+        (self.path / "candidates.json").write_text(
+            json.dumps(self.candidates), encoding="utf-8"
+        )
 
     def write_table(self, name, rows):
         with (self.path / name).open("w", encoding="utf-8-sig", newline="") as f:
@@ -58,8 +85,11 @@ class CNFDataTests(unittest.TestCase):
             writer.writerows(rows)
 
     def test_every_selected_nutrient_matches_original_csv(self):
-        raw = {(r["Food_Code"], r["Nutrient_Code"]): float(r["Nutrient_Amount"])
-               for r in self.tables["nutrient_amount.csv"] if r["Nutrient_Amount"].strip()}
+        raw = {
+            (r["Food_Code"], r["Nutrient_Code"]): float(r["Nutrient_Amount"])
+            for r in self.tables["nutrient_amount.csv"]
+            if r["Nutrient_Amount"].strip()
+        }
         self.assertEqual(len(self.foods), 30)
         self.assertFalse(self.metadata["demo_only"])
         for food in self.foods:
@@ -69,7 +99,9 @@ class CNFDataTests(unittest.TestCase):
             self.assertTrue(self.metadata["food_records"][food.id]["description_en"])
         # Regression guards for the exact staple entries and nutrient forms.
         foods = {f.id: f for f in self.foods}
-        self.assertEqual({f.id for f in self.foods if f.role == "staple"}, {"4523", "4066", "4458"})
+        self.assertEqual(
+            {f.id for f in self.foods if f.role == "staple"}, {"4523", "4066", "4458"}
+        )
         self.assertAlmostEqual(foods["4523"].per100g["carbohydrate_g"], 28.17)
         self.assertAlmostEqual(foods["4066"].per100g["carbohydrate_g"], 49.21)
         self.assertEqual(foods["4066"].per100g["synthetic_folic_acid_ug"], 97)
@@ -77,8 +109,12 @@ class CNFDataTests(unittest.TestCase):
 
     def test_real_data_runs_through_ga(self):
         foods, _ = load_foods(self.path)
-        ga = MealGA(foods, [Person("A", 30, "female", 60, 2000)],
-                    Config(population_size=8, generations=2), seed=7)
+        ga = MealGA(
+            foods,
+            [Person("A", 30, "female", 60, 2000)],
+            Config(population_size=8, generations=2),
+            seed=7,
+        )
         plans, history = ga.run()
         self.assertEqual(len(history), 3)
         for individual, ev in plans:
@@ -91,15 +127,21 @@ class CNFDataTests(unittest.TestCase):
             load_foods(self.path)
 
     def test_missing_required_nutrient_not_zero(self):
-        rows = [r for r in self.tables["nutrient_amount.csv"]
-                if (r["Food_Code"], r["Nutrient_Code"]) != ("4523", "320")]
+        rows = [
+            r
+            for r in self.tables["nutrient_amount.csv"]
+            if (r["Food_Code"], r["Nutrient_Code"]) != ("4523", "320")
+        ]
         self.write_table("nutrient_amount.csv", rows)
         with self.assertRaisesRegex(ValueError, "vitamin_a_rae_ug"):
             load_cnf_data(self.path)
 
     def test_missing_optional_ul_remains_unknown(self):
-        rows = [r for r in self.tables["nutrient_amount.csv"]
-                if (r["Food_Code"], r["Nutrient_Code"]) != ("4523", "319")]
+        rows = [
+            r
+            for r in self.tables["nutrient_amount.csv"]
+            if (r["Food_Code"], r["Nutrient_Code"]) != ("4523", "319")
+        ]
         self.write_table("nutrient_amount.csv", rows)
         foods, _ = load_cnf_data(self.path)
         rice = next(f for f in foods if f["id"] == "4523")
@@ -108,7 +150,9 @@ class CNFDataTests(unittest.TestCase):
 
     def test_mismatched_unit_rejected(self):
         rows = copy.deepcopy(self.tables["nutrient_name.csv"])
-        next(r for r in rows if r["Nutrient_Code"] == "328")["Nutrient_Unit"] = "International Unit"
+        next(r for r in rows if r["Nutrient_Code"] == "328")["Nutrient_Unit"] = (
+            "International Unit"
+        )
         self.write_table("nutrient_name.csv", rows)
         with self.assertRaisesRegex(ValueError, "code/unit mismatch"):
             load_cnf_data(self.path)
@@ -128,15 +172,24 @@ class CNFDataTests(unittest.TestCase):
 
     def test_changed_food_description_rejected(self):
         rows = copy.deepcopy(self.tables["food_name.csv"])
-        next(r for r in rows if r["Food_Code"] == "4523")["Food_Description_EN"] = "Dry rice"
+        next(r for r in rows if r["Food_Code"] == "4523")["Food_Description_EN"] = (
+            "Dry rice"
+        )
         self.write_table("food_name.csv", rows)
         with self.assertRaisesRegex(ValueError, "description mismatch"):
             load_cnf_data(self.path)
 
     def test_json_input_still_supported(self):
         path = self.path / "foods.json"
-        path.write_text(json.dumps({"foods": [asdict(f) for f in self.foods],
-                                    "metadata": {"source": "CNF JSON test"}}), encoding="utf-8")
+        path.write_text(
+            json.dumps(
+                {
+                    "foods": [asdict(f) for f in self.foods],
+                    "metadata": {"source": "CNF JSON test"},
+                }
+            ),
+            encoding="utf-8",
+        )
         foods, metadata = load_foods(path)
         self.assertEqual(metadata["source"], "CNF JSON test")
         self.assertEqual(foods, self.foods)
@@ -147,21 +200,34 @@ class CNFDataTests(unittest.TestCase):
 
 class SelectionTests(unittest.TestCase):
     def setUp(self):
-        self.population = [Individual([Meal([Dish([str(i)], [10], 100)], "rice",
-                                           Fruit(["apple"], [10], [250 / 3]))])
-                           for i in range(6)]
+        self.population = [
+            Individual(
+                [
+                    Meal(
+                        [Dish([str(i)], [10], 100)],
+                        "rice",
+                        Fruit(["apple"], [10], [250 / 3]),
+                    )
+                ]
+            )
+            for i in range(6)
+        ]
         self.evaluations = [
-            Evaluation([], 100, 100, .5, "exceeded"),
+            Evaluation([], 100, 100, 0.5, "exceeded"),
             Evaluation([], 60, 60, 0, "checked_no_excess"),
             Evaluation([], 100, 100, 0, "not_fully_assessed"),
             Evaluation([], 90, 90, 0, "checked_no_excess"),
-            Evaluation([], 50, 50, .1, "exceeded"),
-            Evaluation([], 100, 100, .2, "exceeded"),
+            Evaluation([], 50, 50, 0.1, "exceeded"),
+            Evaluation([], 100, 100, 0.2, "exceeded"),
         ]
 
     def test_survivors_use_ul_order_and_deep_copy(self):
-        self.assertEqual(survivor_selection.rank_population(self.evaluations), [3, 1, 2, 4, 5, 0])
-        elites = survivor_selection.select_survivors(self.population, self.evaluations, 2)
+        self.assertEqual(
+            survivor_selection.rank_population(self.evaluations), [3, 1, 2, 4, 5, 0]
+        )
+        elites = survivor_selection.select_survivors(
+            self.population, self.evaluations, 2
+        )
         self.assertEqual(elites, [self.population[3], self.population[1]])
         elites[0].meals[0].dishes[0].units[0] = 9
         elites[0].meals[0].fruit.person_weights_g[0] = 50
@@ -187,16 +253,27 @@ class SelectionTests(unittest.TestCase):
         self.assertIs(b, self.population[3])
 
     def test_zero_elites_and_invalid_selection_inputs(self):
-        self.assertEqual(survivor_selection.select_survivors(self.population, self.evaluations, 0), [])
+        self.assertEqual(
+            survivor_selection.select_survivors(self.population, self.evaluations, 0),
+            [],
+        )
         for count in (-1, 7):
             with self.assertRaises(ValueError):
-                survivor_selection.select_survivors(self.population, self.evaluations, count)
+                survivor_selection.select_survivors(
+                    self.population, self.evaluations, count
+                )
         with self.assertRaises(ValueError):
-            survivor_selection.select_survivors(self.population, self.evaluations[:2], 2)
+            survivor_selection.select_survivors(
+                self.population, self.evaluations[:2], 2
+            )
         with self.assertRaises(ValueError):
-            parent_selection.select_parent(self.population, self.evaluations[:2], random.Random(1))
+            parent_selection.select_parent(
+                self.population, self.evaluations[:2], random.Random(1)
+            )
         with self.assertRaises(ValueError):
-            parent_selection.select_parent(self.population[:3], self.evaluations[:3], random.Random(1))
+            parent_selection.select_parent(
+                self.population[:3], self.evaluations[:3], random.Random(1)
+            )
 
 
 class MealGATests(unittest.TestCase):
@@ -206,26 +283,35 @@ class MealGATests(unittest.TestCase):
 
     def setUp(self):
         self.foods = copy.deepcopy(self.cnf_foods)
-        self.people = [Person("A", 30, "male", 75, 2400), Person("B", 28, "female", 60, 2000),
-                       Person("C", 45, "female", 65, 1800)]
-        self.ga = MealGA(self.foods, self.people, Config(population_size=12, generations=3), seed=17)
+        self.people = [
+            Person("A", 30, "male", 75, 2400),
+            Person("B", 28, "female", 60, 2000),
+            Person("C", 45, "female", 65, 1800),
+        ]
+        self.ga = MealGA(
+            self.foods, self.people, Config(population_size=12, generations=3), seed=17
+        )
 
     def test_targets_and_staple_formula(self):
         p = self.people[1]
         self.assertEqual(p.targets()["carbohydrate_g"], 275)
         self.assertEqual(p.targets()["protein_g"], 48)
-        self.assertAlmostEqual(p.targets()["fat_g"], 2000 * .275 / 9)
+        self.assertAlmostEqual(p.targets()["fat_g"], 2000 * 0.275 / 9)
         for m, carbs in enumerate((55, 88, 77)):
             for fid in self.ga.staples:
                 grams = self.ga.staple_weights(m, fid)[1]
-                self.assertAlmostEqual(grams / 100 * self.ga.foods[fid].per100g["carbohydrate_g"], carbs)
+                self.assertAlmostEqual(
+                    grams / 100 * self.ga.foods[fid].per100g["carbohydrate_g"], carbs
+                )
 
     def test_initialization_budget_no_double_counting(self):
         individual = self.ga.initialize()
         self.assertEqual([len(m.dishes) for m in individual.meals], [3, 4, 3])
         for m, meal in enumerate(individual.meals):
             expected = self.ga.config.side_budgets_g[m] * 3.1
-            self.assertTrue(.8 * expected <= sum(d.weight_g for d in meal.dishes) <= 1.2 * expected)
+            self.assertTrue(
+                0.8 * expected <= sum(d.weight_g for d in meal.dishes) <= 1.2 * expected
+            )
             self.assertEqual(meal.fruit.person_weights_g, [250 / 3] * 3)
         self.ga.validate(individual)
 
@@ -236,11 +322,19 @@ class MealGATests(unittest.TestCase):
             individual = ga.initialize()
             self.assertEqual([len(m.dishes) for m in individual.meals], [n, n + 1, n])
             for mi in range(3):
-                self.assertAlmostEqual(ga.baseline(mi) * ga.slot_count(mi),
-                                       ga.config.side_budgets_g[mi] * n)
+                self.assertAlmostEqual(
+                    ga.baseline(mi) * ga.slot_count(mi),
+                    ga.config.side_budgets_g[mi] * n,
+                )
             for pi in range(n):
-                self.assertAlmostEqual(sum(g for _, module, _, g in ga.portions(individual, pi)
-                                           if module == "fruit"), 250)
+                self.assertAlmostEqual(
+                    sum(
+                        g
+                        for _, module, _, g in ga.portions(individual, pi)
+                        if module == "fruit"
+                    ),
+                    250,
+                )
             ga.evaluate(individual)
 
     def test_nutrition_counts_all_sources(self):
@@ -249,53 +343,93 @@ class MealGATests(unittest.TestCase):
         for pi, person in enumerate(self.people):
             totals = {k: 0 for k in NUTRIENTS}
             for mi, meal in enumerate(individual.meals):
-                contributions = [(meal.staple_id, self.ga.staple_weights(mi, meal.staple_id)[pi])]
+                contributions = [
+                    (meal.staple_id, self.ga.staple_weights(mi, meal.staple_id)[pi])
+                ]
                 for dish in meal.dishes:
                     for fid, u in zip(dish.food_ids, dish.units):
-                        contributions.append((fid, dish.weight_g * person.factor / 3.1 * u / 10))
+                        contributions.append(
+                            (fid, dish.weight_g * person.factor / 3.1 * u / 10)
+                        )
                 for fid, u in zip(meal.fruit.food_ids, meal.fruit.units):
-                    contributions.append((fid, meal.fruit.person_weights_g[pi] * u / 10))
+                    contributions.append(
+                        (fid, meal.fruit.person_weights_g[pi] * u / 10)
+                    )
                 for fid, grams in contributions:
                     for key in NUTRIENTS:
                         totals[key] += grams / 100 * self.ga.foods[fid].per100g[key]
             for key in NUTRIENTS:
-                self.assertAlmostEqual(evaluation.people[pi]["totals"][key], totals[key])
-            self.assertGreater(evaluation.people[pi]["totals"]["carbohydrate_g"],
-                               .8 * person.targets()["carbohydrate_g"])
+                self.assertAlmostEqual(
+                    evaluation.people[pi]["totals"][key], totals[key]
+                )
+            self.assertGreater(
+                evaluation.people[pi]["totals"]["carbohydrate_g"],
+                0.8 * person.targets()["carbohydrate_g"],
+            )
 
     def test_unknown_ul_and_reference_forms_are_separate(self):
         evaluation = self.ga.evaluate(self.ga.initialize())
         for person in evaluation.people:
-            self.assertEqual(person["ul_checks"]["ul_applicable_e_mg"]["status"], "not_assessed")
+            self.assertEqual(
+                person["ul_checks"]["ul_applicable_e_mg"]["status"], "not_assessed"
+            )
             self.assertIsNone(person["totals"]["ul_applicable_e_mg"])
         # High total A/DFE from plant sources must not cause preformed-A/folic-acid excess.
         altered = []
         for food in self.foods:
             nutrients = dict(food.per100g)
-            nutrients.update(vitamin_a_rae_ug=10000, folate_dfe_ug=10000,
-                             preformed_a_ug=0, synthetic_folic_acid_ug=0, ul_applicable_e_mg=0)
-            altered.append(Food(food.id, food.name, food.category, food.role, nutrients, food.mix_group))
+            nutrients.update(
+                vitamin_a_rae_ug=10000,
+                folate_dfe_ug=10000,
+                preformed_a_ug=0,
+                synthetic_folic_acid_ug=0,
+                ul_applicable_e_mg=0,
+            )
+            altered.append(
+                Food(
+                    food.id,
+                    food.name,
+                    food.category,
+                    food.role,
+                    nutrients,
+                    food.mix_group,
+                )
+            )
         ga = MealGA(altered, self.people, seed=10)
         ev = ga.evaluate(ga.initialize())
         for p in ev.people:
             self.assertEqual(p["scores"]["vitamin_a_rae_ug"], 4)
             self.assertEqual(p["ul_checks"]["preformed_a_ug"]["excess_ratio"], 0)
-            self.assertEqual(p["ul_checks"]["synthetic_folic_acid_ug"]["excess_ratio"], 0)
+            self.assertEqual(
+                p["ul_checks"]["synthetic_folic_acid_ug"]["excess_ratio"], 0
+            )
 
     def test_ul_precedes_score_and_excess_is_normalized(self):
         safe = Evaluation([], 50, 50, 0, "checked_no_excess")
         unknown = Evaluation([], 100, 100, 0, "not_fully_assessed")
-        excess = Evaluation([], 100, 99, .1, "exceeded")
-        worse = Evaluation([], 100, 100, .2, "exceeded")
+        excess = Evaluation([], 100, 99, 0.1, "exceeded")
+        worse = Evaluation([], 100, 100, 0.2, "exceeded")
         self.assertLess(safe.key, unknown.key)
         self.assertLess(unknown.key, excess.key)
         self.assertLess(excess.key, worse.key)
-        foods = [Food(f.id, f.name, f.category, f.role,
-                      {k: (UL[k] * 2 if k in UL else f.per100g.get(k)) for k in ALL_FIELDS},
-                      f.mix_group) for f in self.foods]
+        foods = [
+            Food(
+                f.id,
+                f.name,
+                f.category,
+                f.role,
+                {k: (UL[k] * 2 if k in UL else f.per100g.get(k)) for k in ALL_FIELDS},
+                f.mix_group,
+            )
+            for f in self.foods
+        ]
         ga = MealGA(foods, self.people, seed=10)
         ev = ga.evaluate(ga.initialize())
-        expected = sum(max(0, p["totals"][k] / limit - 1) for p in ev.people for k, limit in UL.items())
+        expected = sum(
+            max(0, p["totals"][k] / limit - 1)
+            for p in ev.people
+            for k, limit in UL.items()
+        )
         self.assertEqual(ev.ul_status, "exceeded")
         self.assertAlmostEqual(ev.excess, expected)
         self.assertAlmostEqual(ev.fitness, ev.base_score - 10 * expected / 3)
@@ -311,8 +445,13 @@ class MealGATests(unittest.TestCase):
             self.ga.validate(child)
             b = child
         self.assertEqual(a, before)
-        self.assertEqual(kind_events, {"none", "same_category", "copy_other", "delete", "add"})
-        self.assertEqual(portion_events, {"none", "side_ratio", "side_weight", "fruit_ratio", "fruit_transfer"})
+        self.assertEqual(
+            kind_events, {"none", "same_category", "copy_other", "delete", "add"}
+        )
+        self.assertEqual(
+            portion_events,
+            {"none", "side_ratio", "side_weight", "fruit_ratio", "fruit_transfer"},
+        )
 
     def test_bounded_fruit_repair(self):
         for weights in ([0, 0, 0], [1, 1, 10000], [150, 150, 50], [50, 50, 150]):
@@ -321,9 +460,20 @@ class MealGATests(unittest.TestCase):
             self.assertTrue(all(50 - 1e-7 <= w <= 150 + 1e-7 for w in repaired))
 
     def test_missing_data_does_not_hide_known_ul_excess(self):
-        foods = [Food(f.id, f.name, f.category, f.role,
-                      {**f.per100g, "ul_applicable_e_mg": 100000 if f.role == "staple" else None},
-                      f.mix_group) for f in self.foods]
+        foods = [
+            Food(
+                f.id,
+                f.name,
+                f.category,
+                f.role,
+                {
+                    **f.per100g,
+                    "ul_applicable_e_mg": 100000 if f.role == "staple" else None,
+                },
+                f.mix_group,
+            )
+            for f in self.foods
+        ]
         ga = MealGA(foods, self.people, seed=9)
         ev = ga.evaluate(ga.initialize())
         self.assertEqual(ev.ul_status, "exceeded")
@@ -335,22 +485,33 @@ class MealGATests(unittest.TestCase):
             self.assertGreater(check["known_lower_bound"], 1000)
 
     def test_staple_type_mutation_recalculates_weight(self):
-        ga = MealGA(self.foods, self.people, Config(staple_mutation_probability=1), seed=42)
+        ga = MealGA(
+            self.foods, self.people, Config(staple_mutation_probability=1), seed=42
+        )
         individual = ga.initialize()
         before = [m.staple_id for m in individual.meals]
         mutation.mutate_staple(ga, individual)
-        self.assertEqual(sum(a != m.staple_id for a, m in zip(before, individual.meals)), 1)
+        self.assertEqual(
+            sum(a != m.staple_id for a, m in zip(before, individual.meals)), 1
+        )
         for mi, meal in enumerate(individual.meals):
             for pi, grams in enumerate(ga.staple_weights(mi, meal.staple_id)):
-                self.assertAlmostEqual(grams / 100 * ga.foods[meal.staple_id].per100g["carbohydrate_g"],
-                                       self.people[pi].targets()["carbohydrate_g"] * .8 * ga.config.meal_shares[mi])
+                self.assertAlmostEqual(
+                    grams / 100 * ga.foods[meal.staple_id].per100g["carbohydrate_g"],
+                    self.people[pi].targets()["carbohydrate_g"]
+                    * 0.8
+                    * ga.config.meal_shares[mi],
+                )
 
     def test_run_reproducibility_statistics_and_elitism(self):
         plans, history = self.ga.run()
         other = MealGA(self.foods, self.people, self.ga.config, seed=17)
         plans2, history2 = other.run()
         self.assertEqual(history, history2)
-        self.assertEqual([self.ga.signature(i) for i, _ in plans], [other.signature(i) for i, _ in plans2])
+        self.assertEqual(
+            [self.ga.signature(i) for i, _ in plans],
+            [other.signature(i) for i, _ in plans2],
+        )
         self.assertEqual(len(history), 4)
         self.assertEqual([h["generation"] for h in history], [0, 1, 2, 3])
         self.assertTrue(1 <= len(plans) <= 3)
@@ -361,7 +522,9 @@ class MealGATests(unittest.TestCase):
             recomputed = self.ga.evaluate(individual)
             self.assertEqual(ev.ul_status, recomputed.ul_status)
             for field in ("base_score", "fitness", "excess"):
-                self.assertAlmostEqual(getattr(ev, field), getattr(recomputed, field), places=9)
+                self.assertAlmostEqual(
+                    getattr(ev, field), getattr(recomputed, field), places=9
+                )
             for a, b in zip(ev.people, recomputed.people):
                 for key, value in a["totals"].items():
                     if value is None:
@@ -369,8 +532,17 @@ class MealGATests(unittest.TestCase):
                     else:
                         self.assertAlmostEqual(value, b["totals"][key], places=9)
         # For fully assessed, no-excess data, elite preservation makes best score monotone.
-        zero_ul = [Food(f.id, f.name, f.category, f.role,
-                       {**f.per100g, **{k: 0 for k in UL}}, f.mix_group) for f in self.foods]
+        zero_ul = [
+            Food(
+                f.id,
+                f.name,
+                f.category,
+                f.role,
+                {**f.per100g, **{k: 0 for k in UL}},
+                f.mix_group,
+            )
+            for f in self.foods
+        ]
         _, safe_history = MealGA(zero_ul, self.people, self.ga.config, seed=4).run()
         scores = [h["best_score"] for h in safe_history]
         self.assertEqual(scores, sorted(scores))
@@ -387,14 +559,23 @@ class MealGATests(unittest.TestCase):
 def scalar_reference(ga, individual):
     people, excess, fully_checked = [], 0.0, True
     for pi, person in enumerate(ga.people):
-        portions = [(ga.foods[fid], grams) for _, _, fid, grams in ga.portions(individual, pi)
-                    if grams > 0]
+        portions = [
+            (ga.foods[fid], grams)
+            for _, _, fid, grams in ga.portions(individual, pi)
+            if grams > 0
+        ]
         totals, known = {}, {}
         for field in ALL_FIELDS:
-            known[field] = sum(grams / 100 * food.per100g[field] for food, grams in portions
-                               if food.per100g.get(field) is not None)
-            totals[field] = (None if any(food.per100g.get(field) is None for food, _ in portions)
-                             else known[field])
+            known[field] = sum(
+                grams / 100 * food.per100g[field]
+                for food, grams in portions
+                if food.per100g.get(field) is not None
+            )
+            totals[field] = (
+                None
+                if any(food.per100g.get(field) is None for food, _ in portions)
+                else known[field]
+            )
         targets = person.targets()
         scores = {k: WEIGHTS[k] * min(totals[k] / targets[k], 1) for k in NUTRIENTS}
         checks = {}
@@ -403,28 +584,51 @@ def scalar_reference(ga, individual):
             if totals[field] is None and ratio <= EPS:
                 ratio = None
             checks[field] = {
-                "actual": totals[field], "limit": limit, "excess_ratio": ratio,
-                "known_lower_bound": known[field], "fully_assessed": totals[field] is not None,
-                "status": "not_assessed" if ratio is None else (
-                    "exceeded" if ratio > EPS else "checked_no_excess"),
+                "actual": totals[field],
+                "limit": limit,
+                "excess_ratio": ratio,
+                "known_lower_bound": known[field],
+                "fully_assessed": totals[field] is not None,
+                "status": "not_assessed"
+                if ratio is None
+                else ("exceeded" if ratio > EPS else "checked_no_excess"),
             }
             excess += ratio or 0
             fully_checked &= totals[field] is not None
-        people.append({"name": person.name, "totals": totals, "targets": targets,
-                       "scores": scores, "score": sum(scores.values()),
-                       "deficits": {k: max(0, targets[k] - totals[k]) for k in NUTRIENTS},
-                       "ul_checks": checks})
+        people.append(
+            {
+                "name": person.name,
+                "totals": totals,
+                "targets": targets,
+                "scores": scores,
+                "score": sum(scores.values()),
+                "deficits": {k: max(0, targets[k] - totals[k]) for k in NUTRIENTS},
+                "ul_checks": checks,
+            }
+        )
     base = sum(p["score"] for p in people) / len(people)
-    status = "exceeded" if excess > EPS else (
-        "checked_no_excess" if fully_checked else "not_fully_assessed")
-    return Evaluation(people, base, base - ga.config.excess_penalty * excess / len(people), excess, status)
+    status = (
+        "exceeded"
+        if excess > EPS
+        else ("checked_no_excess" if fully_checked else "not_fully_assessed")
+    )
+    return Evaluation(
+        people,
+        base,
+        base - ga.config.excess_penalty * excess / len(people),
+        excess,
+        status,
+    )
 
 
 class TorchFitnessTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.foods, _ = load_foods(ROOT / "dataset")
-        cls.people = [Person("A", 30, "male", 75, 2400), Person("B", 28, "female", 60, 2000)]
+        cls.people = [
+            Person("A", 30, "male", 75, 2400),
+            Person("B", 28, "female", 60, 2000),
+        ]
 
     def setUp(self):
         self.ga = MealGA(self.foods, self.people, seed=29)
@@ -462,7 +666,9 @@ class TorchFitnessTests(unittest.TestCase):
             mutation.mutate_portions(self.ga, individual)
         evaluations = self.ga.evaluate_population(population)
         for individual, batch in zip(population, evaluations):
-            self.assert_tree_close(asdict(batch), asdict(scalar_reference(self.ga, individual)))
+            self.assert_tree_close(
+                asdict(batch), asdict(scalar_reference(self.ga, individual))
+            )
             self.assert_tree_close(asdict(batch), asdict(self.ga.evaluate(individual)))
 
     def test_empty_population(self):
@@ -472,20 +678,32 @@ class TorchFitnessTests(unittest.TestCase):
     def test_unconsumed_unknown_food_does_not_propagate_missingness(self):
         fruits = [f.id for f in self.foods if f.role == "fruit"]
         unknown, known = fruits[:2]
-        foods = [Food(f.id, f.name, f.category, f.role,
-                      {**f.per100g, "ul_applicable_e_mg": None if f.id == unknown else 0},
-                      f.mix_group) for f in self.foods]
+        foods = [
+            Food(
+                f.id,
+                f.name,
+                f.category,
+                f.role,
+                {**f.per100g, "ul_applicable_e_mg": None if f.id == unknown else 0},
+                f.mix_group,
+            )
+            for f in self.foods
+        ]
         ga = MealGA(foods, self.people, seed=29)
         individual = ga.initialize()
         for meal in individual.meals:
             meal.fruit.food_ids, meal.fruit.units = [known], [10]
         for person in ga.evaluate(individual).people:
-            self.assertEqual(person["ul_checks"]["ul_applicable_e_mg"]["status"], "checked_no_excess")
+            self.assertEqual(
+                person["ul_checks"]["ul_applicable_e_mg"]["status"], "checked_no_excess"
+            )
             self.assertEqual(person["totals"]["ul_applicable_e_mg"], 0)
         individual.meals[0].fruit.food_ids = [known, unknown]
         individual.meals[0].fruit.units = [5, 5]
         for person in ga.evaluate(individual).people:
-            self.assertEqual(person["ul_checks"]["ul_applicable_e_mg"]["status"], "not_assessed")
+            self.assertEqual(
+                person["ul_checks"]["ul_applicable_e_mg"]["status"], "not_assessed"
+            )
             self.assertIsNone(person["totals"]["ul_applicable_e_mg"])
 
     def test_re_evaluation_uses_current_portions(self):
@@ -495,7 +713,9 @@ class TorchFitnessTests(unittest.TestCase):
         new = self.ga.evaluate(individual)
         for a, b in zip(old.people, new.people):
             self.assertGreater(b["totals"]["energy_kcal"], a["totals"]["energy_kcal"])
-        self.assert_tree_close(asdict(new), asdict(scalar_reference(self.ga, individual)))
+        self.assert_tree_close(
+            asdict(new), asdict(scalar_reference(self.ga, individual))
+        )
 
     def test_auto_device_and_unsupported_device(self):
         auto = resolve_device("auto")
@@ -512,7 +732,9 @@ class TorchFitnessTests(unittest.TestCase):
         gpu = MealGA(self.foods, self.people, Config(device="cuda"), seed=29)
         population = [self.ga.initialize() for _ in range(8)]
         self.assertEqual(gpu.nutrient_matrix.device.type, "cuda")
-        for cpu, cuda in zip(self.ga.evaluate_population(population), gpu.evaluate_population(population)):
+        for cpu, cuda in zip(
+            self.ga.evaluate_population(population), gpu.evaluate_population(population)
+        ):
             self.assert_tree_close(asdict(cpu), asdict(cuda))
 
 
