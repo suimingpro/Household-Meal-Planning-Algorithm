@@ -1,0 +1,23 @@
+[
+  {
+    "name": "成人A",
+    "age": 30,
+    "reference_group": "male",
+    "weight_kg": 75,
+    "energy_kcal": 2400
+  },
+  {
+    "name": "成人B",
+    "age": 28,
+    "reference_group": "female",
+    "weight_kg": 60,
+    "energy_kcal": 2000
+  },
+  {
+    "name": "成人C",
+    "age": 45,
+    "reference_group": "female",
+    "weight_kg": 65,
+    "energy_kcal": 1800
+  }
+]

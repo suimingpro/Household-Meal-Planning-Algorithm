@@ -1,0 +1,215 @@
+{
+  "description": "Project candidate pool; all nutrient values are joined from CNF 2026 CSVs using food_code. Labels include preparation state.",
+  "foods": [
+    {
+      "food_code": "4523",
+      "name": "熟米饭（长粒，熟）",
+      "category": "starch",
+      "role": "staple",
+      "description_en": "Grains, rice, white, long-grain, regular, cooked"
+    },
+    {
+      "food_code": "4066",
+      "name": "白面包（市售）",
+      "category": "starch",
+      "role": "staple",
+      "description_en": "Bread, white, commercial"
+    },
+    {
+      "food_code": "4458",
+      "name": "鸡蛋面（强化，熟）",
+      "category": "starch",
+      "role": "staple",
+      "description_en": "Pasta, egg noodles, enriched, cooked"
+    },
+    {
+      "food_code": "1696",
+      "name": "苹果（带皮，生）",
+      "category": "fruit",
+      "role": "fruit",
+      "description_en": "Apple, raw, with skin"
+    },
+    {
+      "food_code": "1616",
+      "name": "脐橙（生）",
+      "category": "fruit",
+      "role": "fruit",
+      "description_en": "Orange, california, navel, raw"
+    },
+    {
+      "food_code": "1704",
+      "name": "香蕉（生）",
+      "category": "fruit",
+      "role": "fruit",
+      "description_en": "Banana, raw"
+    },
+    {
+      "food_code": "1585",
+      "name": "猕猴桃（生）",
+      "category": "fruit",
+      "role": "fruit",
+      "description_en": "Kiwi fruit, raw"
+    },
+    {
+      "food_code": "1749",
+      "name": "草莓（生）",
+      "category": "fruit",
+      "role": "fruit",
+      "description_en": "Strawberry, raw"
+    },
+    {
+      "food_code": "2375",
+      "name": "西兰花（水煮沥干）",
+      "category": "vegetable",
+      "role": "mixed",
+      "description_en": "Broccoli, boiled, drained"
+    },
+    {
+      "food_code": "2214",
+      "name": "菠菜（水煮沥干）",
+      "category": "vegetable",
+      "role": "mixed",
+      "description_en": "Spinach, boiled, drained"
+    },
+    {
+      "food_code": "2381",
+      "name": "胡萝卜（水煮沥干）",
+      "category": "vegetable",
+      "role": "mixed",
+      "description_en": "Carrot, boiled, drained"
+    },
+    {
+      "food_code": "2460",
+      "name": "番茄（生）",
+      "category": "vegetable",
+      "role": "mixed",
+      "description_en": "Tomato, red, ripe, raw, year round average"
+    },
+    {
+      "food_code": "2363",
+      "name": "黄瓜（生）",
+      "category": "vegetable",
+      "role": "mixed",
+      "description_en": "Cucumber, raw"
+    },
+    {
+      "food_code": "2362",
+      "name": "卷心菜（水煮沥干）",
+      "category": "vegetable",
+      "role": "mixed",
+      "description_en": "Cabbage, boiled, drained"
+    },
+    {
+      "food_code": "2484",
+      "name": "红甜椒（生）",
+      "category": "vegetable",
+      "role": "mixed",
+      "description_en": "Pepper, sweet, red, raw"
+    },
+    {
+      "food_code": "5958",
+      "name": "白蘑菇（炒制，无添加脂肪）",
+      "category": "vegetable",
+      "role": "mixed",
+      "description_en": "Mushroom, white, stir-fried, no fat added"
+    },
+    {
+      "food_code": "2422",
+      "name": "土豆（去皮水煮）",
+      "category": "starch",
+      "role": "mixed",
+      "description_en": "Potato, boiled without skin, flesh"
+    },
+    {
+      "food_code": "2242",
+      "name": "红薯（去皮水煮）",
+      "category": "starch",
+      "role": "mixed",
+      "description_en": "Sweet potato, boiled without skin"
+    },
+    {
+      "food_code": "2068",
+      "name": "甜玉米（水煮沥干）",
+      "category": "starch",
+      "role": "mixed",
+      "description_en": "Corn, sweet, yellow, on or off the cob, boiled, drained"
+    },
+    {
+      "food_code": "842",
+      "name": "鸡胸肉（烤制）",
+      "category": "protein",
+      "role": "mixed",
+      "description_en": "Chicken, broiler, breast, meat, roasted"
+    },
+    {
+      "food_code": "2687",
+      "name": "瘦牛肉末（烤制）",
+      "category": "protein",
+      "role": "mixed",
+      "description_en": "Beef, ground, lean, broiled"
+    },
+    {
+      "food_code": "1780",
+      "name": "猪里脊瘦肉（烤制）",
+      "category": "protein",
+      "role": "mixed",
+      "description_en": "Pork, loin, whole, lean, roasted"
+    },
+    {
+      "food_code": "3053",
+      "name": "红鲑鱼（烤制）",
+      "category": "protein",
+      "role": "mixed",
+      "description_en": "Fish, salmon, sockeye (red), baked or broiled"
+    },
+    {
+      "food_code": "3212",
+      "name": "虾（水煮或蒸制）",
+      "category": "protein",
+      "role": "mixed",
+      "description_en": "Crustaceans, shrimp, mixed species, boiled or steamed"
+    },
+    {
+      "food_code": "3404",
+      "name": "普通豆腐（硬或特硬）",
+      "category": "protein",
+      "role": "mixed",
+      "description_en": "Tofu, regular, firm or extra firm (prepared with magnesium chloride and calcium sulphate or calcium chloride)"
+    },
+    {
+      "food_code": "130",
+      "name": "鸡蛋（带壳煮熟）",
+      "category": "protein",
+      "role": "mixed",
+      "description_en": "Egg, chicken, whole, cooked, boiled in shell, hard-cooked"
+    },
+    {
+      "food_code": "2410",
+      "name": "青豌豆（水煮沥干）",
+      "category": "protein",
+      "role": "mixed",
+      "description_en": "Peas, green, boiled, drained"
+    },
+    {
+      "food_code": "422",
+      "name": "橄榄油",
+      "category": "other",
+      "role": "mixed",
+      "description_en": "Vegetable oil, olive"
+    },
+    {
+      "food_code": "61",
+      "name": "牛奶（2%乳脂）",
+      "category": "other",
+      "role": "standalone",
+      "description_en": "Milk, fluid, partly skimmed, 2% M.F."
+    },
+    {
+      "food_code": "6961",
+      "name": "原味酸奶（2–3.9%乳脂）",
+      "category": "other",
+      "role": "standalone",
+      "description_en": "Yogourt (yogurt), 2-3.9% M.F., plain"
+    }
+  ]
+}
