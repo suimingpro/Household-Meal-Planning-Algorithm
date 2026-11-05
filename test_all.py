@@ -13,7 +13,7 @@ from unittest.mock import Mock
 
 import torch
 
-from cnf_data import NUTRIENT_MAP, csv_rows, load_cnf_data
+from cnf_data import csv_rows, load_cnf_data
 from device_utils import resolve_device
 from ga_models import (
     ALL_FIELDS,
@@ -46,7 +46,11 @@ class CNFDataTests(unittest.TestCase):
             (cls.dataset / "candidates.json").read_text(encoding="utf-8")
         )
         cls.codes = {f.id for f in cls.foods}
-        needed = {code for code, _ in NUTRIENT_MAP.values()}
+        cls.nutrient_map = {
+            field: (record["code"], record["unit"])
+            for field, record in cls.metadata["nutrient_mapping"].items()
+        }
+        needed = {code for code, _ in cls.nutrient_map.values()}
         # Small fixtures are selected from the real files; mutation tests never
         # change the repository's original CNF CSVs.
         cls.tables = {}
@@ -78,9 +82,11 @@ class CNFDataTests(unittest.TestCase):
             json.dumps(self.candidates), encoding="utf-8"
         )
 
-    def write_table(self, name, rows):
+    def write_table(self, name, rows, fieldnames=None):
         with (self.path / name).open("w", encoding="utf-8-sig", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=self.tables[name][0].keys())
+            writer = csv.DictWriter(
+                f, fieldnames=fieldnames if fieldnames is not None else self.tables[name][0].keys()
+            )
             writer.writeheader()
             writer.writerows(rows)
 
@@ -93,7 +99,7 @@ class CNFDataTests(unittest.TestCase):
         self.assertEqual(len(self.foods), 30)
         self.assertFalse(self.metadata["demo_only"])
         for food in self.foods:
-            for field, (code, _) in NUTRIENT_MAP.items():
+            for field, (code, _) in self.nutrient_map.items():
                 self.assertEqual(food.per100g[field], raw.get((food.id, code)))
             self.assertIsNone(food.per100g["ul_applicable_e_mg"])
             self.assertTrue(self.metadata["food_records"][food.id]["description_en"])
@@ -155,6 +161,66 @@ class CNFDataTests(unittest.TestCase):
         )
         self.write_table("nutrient_name.csv", rows)
         with self.assertRaisesRegex(ValueError, "code/unit mismatch"):
+            load_cnf_data(self.path)
+
+    def test_nutrient_codes_are_resolved_after_renumbering(self):
+        for name in ("nutrient_name.csv", "nutrient_amount.csv"):
+            rows = copy.deepcopy(self.tables[name])
+            for row in rows:
+                row["Nutrient_Code"] = str(int(row["Nutrient_Code"]) + 100000)
+            self.write_table(name, rows)
+        foods, metadata = load_foods(self.path)
+        self.assertEqual(foods, self.foods)
+        for field, (code, unit) in self.nutrient_map.items():
+            mapping = metadata["nutrient_mapping"][field]
+            self.assertEqual(mapping["code"], str(int(code) + 100000))
+            self.assertEqual(mapping["unit"], unit)
+
+    def test_standard_tag_has_priority_over_english_name(self):
+        rows = copy.deepcopy(self.tables["nutrient_name.csv"])
+        next(r for r in rows if r["Tagname"] == "PROCNT")["Nutrient_Name_EN"] = "Renamed protein"
+        self.write_table("nutrient_name.csv", rows)
+        foods, _ = load_foods(self.path)
+        self.assertEqual(foods, self.foods)
+
+    def test_english_names_work_without_standard_tags(self):
+        for remove_column in (False, True):
+            with self.subTest(remove_column=remove_column):
+                rows = copy.deepcopy(self.tables["nutrient_name.csv"])
+                for row in rows:
+                    if remove_column:
+                        row.pop("Tagname")
+                    else:
+                        row["Tagname"] = ""
+                    row["Nutrient_Name_EN"] = "  " + row["Nutrient_Name_EN"].upper() + "  "
+                self.write_table("nutrient_name.csv", rows, fieldnames=rows[0].keys())
+                foods, _ = load_foods(self.path)
+                self.assertEqual(foods, self.foods)
+
+    def test_missing_nutrient_identifiers_rejected(self):
+        rows = copy.deepcopy(self.tables["nutrient_name.csv"])
+        protein = next(r for r in rows if r["Tagname"] == "PROCNT")
+        protein["Tagname"], protein["Nutrient_Name_EN"] = "", "Unknown nutrient"
+        self.write_table("nutrient_name.csv", rows)
+        with self.assertRaisesRegex(ValueError, "nutrient not found: protein_g"):
+            load_cnf_data(self.path)
+
+    def test_ambiguous_standard_tags_rejected(self):
+        rows = copy.deepcopy(self.tables["nutrient_name.csv"])
+        duplicate = dict(next(r for r in rows if r["Tagname"] == "PROCNT"))
+        duplicate["Nutrient_Code"] = "duplicate-protein"
+        self.write_table("nutrient_name.csv", rows + [duplicate])
+        with self.assertRaisesRegex(ValueError, "Ambiguous CNF nutrient: protein_g"):
+            load_cnf_data(self.path)
+
+    def test_ambiguous_english_names_rejected(self):
+        rows = copy.deepcopy(self.tables["nutrient_name.csv"])
+        for row in rows:
+            row["Tagname"] = ""
+        duplicate = dict(next(r for r in rows if r["Nutrient_Name_EN"] == "Protein"))
+        duplicate["Nutrient_Code"] = "duplicate-protein"
+        self.write_table("nutrient_name.csv", rows + [duplicate])
+        with self.assertRaisesRegex(ValueError, "Ambiguous CNF nutrient: protein_g"):
             load_cnf_data(self.path)
 
     def test_duplicate_nutrient_record_rejected(self):

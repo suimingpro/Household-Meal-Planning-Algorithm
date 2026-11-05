@@ -6,8 +6,9 @@
 
 Attributes:
     CNF_URL: 官方数据集地址，用于记录数据来源。
-    NUTRIENT_MAP: 程序营养字段到CNF营养素代码及预期单位的映射。
-        A的RAE与预成型A、叶酸DFE与合成叶酸分别映射，不互相替代。
+    NUTRIENT_SPECS: 程序营养字段对应的标准标签、英文名称及预期单位。
+        编号由nutrient_name.csv动态解析，A的RAE与预成型A、叶酸DFE与
+        合成叶酸分别查找，不互相替代。
     OPTIONAL_FIELDS: 允许缺失的预成型A与合成叶酸UL专用字段。
         缺失保留为None，不替换为0。
 """
@@ -22,23 +23,23 @@ from pathlib import Path
 from typing import Any
 
 CNF_URL = "https://open.canada.ca/data/en/dataset/1b6139bd-ed7e-4043-bc28-ff00e10f3109"
-# field: (CNF nutrient code, required unit). Do not confuse RAE with retinol,
-# DFE with folic acid, or microgram vitamin D with its IU counterpart.
-NUTRIENT_MAP = {
-    "energy_kcal": ("208", "kilocalorie"),
-    "carbohydrate_g": ("205", "Gram"),
-    "protein_g": ("203", "Gram"),
-    "fat_g": ("204", "Gram"),
-    "vitamin_a_rae_ug": ("320", "Microgram"),
-    "vitamin_c_mg": ("401", "Milligram"),
-    "vitamin_d_ug": ("328", "Microgram"),
-    "vitamin_e_mg": ("323", "Milligram"),
-    "folate_dfe_ug": ("435", "Microgram"),
-    "calcium_mg": ("301", "Milligram"),
-    "iron_mg": ("303", "Milligram"),
-    "potassium_mg": ("306", "Milligram"),
-    "preformed_a_ug": ("319", "Microgram"),
-    "synthetic_folic_acid_ug": ("431", "Microgram"),
+# 字段: (标准Tagname, 标签未匹配时使用的精确英文名称, 预期单位)。
+# 这里只声明算法需要的营养语义，不固定数据集中的Nutrient_Code。
+NUTRIENT_SPECS = {
+    "energy_kcal": ("ENERC_KCAL", "Energy (kilocalories)", "kilocalorie"),
+    "carbohydrate_g": ("CHOCDF", "Carbohydrate, total (by difference)", "Gram"),
+    "protein_g": ("PROCNT", "Protein", "Gram"),
+    "fat_g": ("FAT", "Fat (total lipids)", "Gram"),
+    "vitamin_a_rae_ug": ("VITA_RAE", "Retinol activity equivalents", "Microgram"),
+    "vitamin_c_mg": ("VITC", "Vitamin C", "Milligram"),
+    "vitamin_d_ug": ("VITD", "Vitamin D (D2 + D3)", "Microgram"),
+    "vitamin_e_mg": ("TOCPHA", "Alpha-tocopherol", "Milligram"),
+    "folate_dfe_ug": ("FOLDFE", "Dietary folate equivalents", "Microgram"),
+    "calcium_mg": ("CA", "Calcium", "Milligram"),
+    "iron_mg": ("FE", "Iron", "Milligram"),
+    "potassium_mg": ("K", "Potassium", "Milligram"),
+    "preformed_a_ug": ("RETOL", "Retinol", "Microgram"),
+    "synthetic_folic_acid_ug": ("FOLAC", "Folic acid", "Microgram"),
 }
 OPTIONAL_FIELDS = {"preformed_a_ug", "synthetic_folic_acid_ug"}
 
@@ -99,6 +100,62 @@ def indexed_rows(path: Path, key: str, required: set[str]) -> dict[str, dict[str
     return result
 
 
+def _normalize_label(value: str | None) -> str:
+    """忽略标签或名称的大小写及多余空白，None规范化为空字符串。"""
+    return " ".join((value or "").split()).casefold()
+
+
+def resolve_nutrient_map(
+    nutrient_names: dict[str, dict[str, str]],
+) -> dict[str, tuple[str, str]]:
+    """依据数据表的标准标签或精确英文名称动态查找营养素编号。
+
+    Args:
+        nutrient_names: 以Nutrient_Code为键的原始营养素记录。每条记录
+            需有Nutrient_Unit，并提供Tagname或Nutrient_Name_EN供匹配。
+
+    Returns:
+        程序字段到(数据集营养素编号, 数据集单位)的映射。
+
+    Raises:
+        ValueError: 标签与名称均无法匹配、同一匹配项存在多个编号、
+            单位不符，或多个程序指标解析到了同一编号。
+
+    Notes:
+        优先精确匹配Tagname；没有标签匹配时回退到英文名称。匹配忽略
+        大小写和多余空白，不使用包含或模糊匹配，避免混淆RAE与Retinol、
+        DFE与Folic acid，以及维生素D的μg与IU。匹配后再独立检查单位。
+    """
+    resolved = {}
+    used_codes = {}
+    for field, (tag, name, expected_unit) in NUTRIENT_SPECS.items():
+        matches = [
+            code for code, row in nutrient_names.items()
+            if _normalize_label(row.get("Tagname")) == _normalize_label(tag)
+        ]
+        if not matches:
+            matches = [
+                code for code, row in nutrient_names.items()
+                if _normalize_label(row.get("Nutrient_Name_EN")) == _normalize_label(name)
+            ]
+        if not matches:
+            raise ValueError(f"CNF nutrient not found: {field}, tag={tag}, name={name}")
+        if len(matches) != 1:
+            raise ValueError(f"Ambiguous CNF nutrient: {field}, matching codes={matches}")
+        code = matches[0]
+        unit = nutrient_names[code].get("Nutrient_Unit", "").strip()
+        if _normalize_label(unit) != _normalize_label(expected_unit):
+            raise ValueError(
+                f"CNF nutrient code/unit mismatch: {field}, code={code}, "
+                f"expected {expected_unit}, got {unit}"
+            )
+        if code in used_codes:
+            raise ValueError(f"CNF nutrient code reused: {code}, {used_codes[code]} and {field}")
+        used_codes[code] = field
+        resolved[field] = (code, unit)
+    return resolved
+
+
 def load_cnf_data(
     directory: str | Path, candidates_path: str | Path | None = None
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -126,7 +183,8 @@ def load_cnf_data(
         KeyError: 候选清单或候选条目缺少必要字段。
 
     Notes:
-        营养记录空白或缺省表示未知，数值0保留为真实零。评分必需字段
+        营养素编号先按标准标签、再按精确英文名称从营养素名称表解析，
+        不固定编号。营养记录空白或缺省表示未知，数值0保留为真实零。评分必需字段
         缺失时拒绝加载；预成型A与合成叶酸允许为None。现有关系表无法
         完整识别维生素E的UL适用形式与来源，因此ul_applicable_e_mg固定
         保留为None，不以总α-生育酚替代。食材分类和角色取自项目候选
@@ -172,16 +230,9 @@ def load_cnf_data(
     nutrient_names = indexed_rows(
         files[3],
         "Nutrient_Code",
-        {"Nutrient_Unit", "Nutrient_Symbol", "Nutrient_Name_EN"},
+        {"Nutrient_Unit"},
     )
-    for field, (code, unit) in NUTRIENT_MAP.items():
-        if (
-            code not in nutrient_names
-            or nutrient_names[code]["Nutrient_Unit"].strip() != unit
-        ):
-            raise ValueError(
-                f"CNF nutrient code/unit mismatch: {field}, expected {code} ({unit})"
-            )
+    nutrient_map = resolve_nutrient_map(nutrient_names)
     for candidate, code in zip(candidates, codes):
         if code not in food_names:
             raise ValueError(f"Unknown CNF Food_Code: {code}")
@@ -193,7 +244,7 @@ def load_cnf_data(
 
     selected_values: dict[str, dict[str, float | None]] = {code: {} for code in codes}
     selected_records: dict[str, dict[str, Any]] = {code: {} for code in codes}
-    needed_codes = {code for code, _ in NUTRIENT_MAP.values()}
+    needed_codes = {code for code, _ in nutrient_map.values()}
     for row in csv_rows(files[4], {"Food_Code", "Nutrient_Code", "Nutrient_Amount"}):
         food_code, nutrient_code = (
             row["Food_Code"].strip(),
@@ -223,7 +274,7 @@ def load_cnf_data(
     for candidate, code in zip(candidates, codes):
         values = {
             field: selected_values[code].get(nutrient_code)
-            for field, (nutrient_code, _) in NUTRIENT_MAP.items()
+            for field, (nutrient_code, _) in nutrient_map.items()
         }
         absent = [
             field
@@ -269,8 +320,10 @@ def load_cnf_data(
         "candidate_file": str(candidates_path),
         "food_records": provenance,
         "nutrient_mapping": {
-            field: {"code": code, "unit": unit}
-            for field, (code, unit) in NUTRIENT_MAP.items()
+            field: {"code": code, "unit": unit,
+                    "tag": nutrient_names[code].get("Tagname"),
+                    "name": nutrient_names[code].get("Nutrient_Name_EN")}
+            for field, (code, unit) in nutrient_map.items()
         },
         "ul_note": "Vitamin E UL applicable forms/sources are not identifiable from these tables; not assessed.",
         "input_sha256": {

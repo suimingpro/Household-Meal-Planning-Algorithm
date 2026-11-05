@@ -58,7 +58,7 @@ python3 meal_ga.py --foods dataset --people data/people.json \
 
 ## 食材数据库
 
-默认CNF目录需要 `food_name.csv`、`food_source.csv`、`cnf_food_group.csv`、`nutrient_name.csv`、`nutrient_amount.csv` 及 `candidates.json`。程序验证营养素单位，按每100g可食部分读取数据，使用CNF的 `Food_Code` 作为食材ID，并在输出中保留原始名称、生熟状态和来源。维生素E的UL适用来源无法识别时仍标记未能评估。
+默认CNF目录需要 `food_name.csv`、`food_source.csv`、`cnf_food_group.csv`、`nutrient_name.csv`、`nutrient_amount.csv` 及 `candidates.json`。程序优先按标准 `Tagname`、其次按精确英文名称动态解析营养素编号，并验证单位；不固定营养素数字编号。按每100g可食部分读取数据，使用CNF的 `Food_Code` 作为食材ID，并在输出中保留原始名称、生熟状态和来源。维生素E的UL适用来源无法识别时仍标记未能评估。
 
 也支持自定义JSON：顶层为 `{"metadata": {...}, "foods": [...]}`。每份数据库必须有25–40个不同ID的食材，恰好3种主食（分别录入熟米饭、面包、熟鸡蛋面），至少2种水果。`foods`中每个条目的结构如下表所述。
 
