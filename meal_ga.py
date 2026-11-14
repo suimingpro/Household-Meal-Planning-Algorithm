@@ -182,6 +182,13 @@ class MealGA:
             raise ValueError(
                 "Each mixed-food compatibility group needs at least 4 foods"
             )
+        for group in groups:
+            limits = sorted(
+                (f.max_percent for f in foods if f.role == "mixed" and f.mix_group == group),
+                reverse=True,
+            )
+            if sum(limits[:4]) < 100:
+                raise ValueError(f"Mixed-food group {group}: proportion caps cannot sum to 100% within 4 foods")
         self.factor_sum = sum(p.factor for p in people)
         self.device = device_utils.resolve_device(self.config.device)
         self.dtype = torch.float64
@@ -269,19 +276,20 @@ class MealGA:
         ]
 
     def compatible(self, ids: list[str]) -> bool:
-        """判断食材能否组成非主食组合，不检查比例和重量。
+        """判断食材能否组成非主食组合，不检查实际比例和重量。
 
         Args:
             ids: 已存在于候选池中的食材编号列表。
 
         Returns:
             单独供应项或可混合食材独立出现时为True；多种食材必须均为
-            mixed角色且属于同一个mix_group。水果和主食不作为非主食混合。
+            mixed角色且属于同一个mix_group，且比例上限之和至少100%。
+            受限食材不能单独出现；水果和主食不作为非主食混合。
         """
         fs = [self.foods[f] for f in ids]
-        return (len(fs) == 1 and fs[0].role in {"mixed", "standalone"}) or (
+        return sum(f.max_percent for f in fs) >= 100 and ((len(fs) == 1 and fs[0].role in {"mixed", "standalone"}) or (
             all(f.role == "mixed" for f in fs) and len({f.mix_group for f in fs}) == 1
-        )
+        ))
 
     def new_dish(self, meal: int) -> Dish:
         """随机创建一个符合角色兼容规则的非主食组合。
@@ -293,26 +301,33 @@ class MealGA:
             包含食材编号、比例单位和全家总重量的Dish。混合食材数由
             截断正态分布N(2.5, 1)取整得到1–4种；单独供应项固定一种。
             比例以10%为单位且总和100%，重量在0.8B–1.2B内均匀抽取。
+            只接受比例上限允许的食材组合，剩余比例仅分配给尚未达上限的食材。
         """
         first = self.rng.choice(self.sides)
         food = self.foods[first]
         if food.role == "standalone":
             ids = [first]
         else:
-            sample = self.rng.gauss(2.5, 1)
-            while not 0.5 <= sample < 4.5:
-                sample = self.rng.gauss(2.5, 1)
-            n = math.floor(sample + 0.5)
             pool = [
                 f
                 for f in self.sides
                 if self.foods[f].role == "mixed"
                 and self.foods[f].mix_group == food.mix_group
             ]
+            capacities = sorted((self.foods[f].max_percent for f in pool), reverse=True)
+            while True:
+                sample = self.rng.gauss(2.5, 1)
+                if 0.5 <= sample < 4.5:
+                    n = math.floor(sample + 0.5)
+                    if sum(capacities[:n]) >= 100:
+                        break
             ids = self.rng.sample(pool, n)
+            while not self.compatible(ids):
+                ids = self.rng.sample(pool, n)
         units = [1] * len(ids)
         for _ in range(10 - len(ids)):
-            units[self.rng.randrange(len(ids))] += 1
+            available = [i for i, fid in enumerate(ids) if units[i] < self.foods[fid].max_percent // 10]
+            units[self.rng.choice(available)] += 1
         return Dish(ids, units, self.baseline(meal) * self.rng.uniform(0.8, 1.2))
 
     def initialize(self) -> Individual:
@@ -377,8 +392,11 @@ class MealGA:
                 if fruit:
                     if any(f not in self.fruits for f in module.food_ids):
                         raise ValueError("Non-fruit in fruit module")
-                elif not self.compatible(module.food_ids):
-                    raise ValueError("Incompatible side ingredients")
+                else:
+                    if any(u * 10 > self.foods[fid].max_percent for fid, u in zip(module.food_ids, module.units)):
+                        raise ValueError("Ingredient proportion exceeds max_percent")
+                    if not self.compatible(module.food_ids):
+                        raise ValueError("Incompatible side ingredients")
             for dish in meal.dishes:
                 b = self.baseline(m)
                 if (

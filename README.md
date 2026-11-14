@@ -68,9 +68,12 @@ python3 meal_ga.py --foods dataset --people data/people.json \
 | `category` | `vegetable`非淀粉蔬菜、`starch`淀粉类、`protein`蛋白质食物、`fruit`水果、`other`其他 |
 | `role` | `staple`主食、`fruit`水果、`mixed`允许混合、`standalone`单独供应 |
 | `mix_group` | 允许混合的兼容组，默认`savory`；不同组不混合，每组至少4种食材 |
+| `max_percent` | 在非主食组合中的可食重量比例上限，默认100，按10个百分点设置；橄榄油设为50 |
 | `per100g` | 每100g可食部分的营养值 |
 
 同类替换同时要求角色兼容；牛奶、酸奶等 `standalone` 项始终单独供应。分类不决定营养计算：每种食材的所有字段都参与累计。
+
+橄榄油在 `dataset/candidates.json` 中配置 `"max_percent": 50`，不能独立组成100%橄榄油的组合。初始化、替换、删除后的比例再分配和分量突变均遵守上限；交叉继承整个合法组合。此限制按食材在组合中的重量比例计算，不是每日油量上限或组合的总脂肪比例。其余食材默认仍可占100%。
 
 | `per100g`键 | 单位/用途 |
 | --- | --- |
