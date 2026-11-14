@@ -2410,59 +2410,87 @@
     "nutrient_mapping": {
       "energy_kcal": {
         "code": "208",
-        "unit": "kilocalorie"
+        "unit": "kilocalorie",
+        "tag": "ENERC_KCAL",
+        "name": "Energy (kilocalories)"
       },
       "carbohydrate_g": {
         "code": "205",
-        "unit": "Gram"
+        "unit": "Gram",
+        "tag": "CHOCDF",
+        "name": "Carbohydrate, total (by difference)"
       },
       "protein_g": {
         "code": "203",
-        "unit": "Gram"
+        "unit": "Gram",
+        "tag": "PROCNT",
+        "name": "Protein"
       },
       "fat_g": {
         "code": "204",
-        "unit": "Gram"
+        "unit": "Gram",
+        "tag": "FAT",
+        "name": "Fat (total lipids)"
       },
       "vitamin_a_rae_ug": {
         "code": "320",
-        "unit": "Microgram"
+        "unit": "Microgram",
+        "tag": "VITA_RAE",
+        "name": "Retinol activity equivalents"
       },
       "vitamin_c_mg": {
         "code": "401",
-        "unit": "Milligram"
+        "unit": "Milligram",
+        "tag": "VITC",
+        "name": "Vitamin C"
       },
       "vitamin_d_ug": {
         "code": "328",
-        "unit": "Microgram"
+        "unit": "Microgram",
+        "tag": "VITD",
+        "name": "Vitamin D (D2 + D3)"
       },
       "vitamin_e_mg": {
         "code": "323",
-        "unit": "Milligram"
+        "unit": "Milligram",
+        "tag": "TOCPHA",
+        "name": "Alpha-tocopherol"
       },
       "folate_dfe_ug": {
         "code": "435",
-        "unit": "Microgram"
+        "unit": "Microgram",
+        "tag": "FOLDFE",
+        "name": "Dietary folate equivalents"
       },
       "calcium_mg": {
         "code": "301",
-        "unit": "Milligram"
+        "unit": "Milligram",
+        "tag": "CA",
+        "name": "Calcium"
       },
       "iron_mg": {
         "code": "303",
-        "unit": "Milligram"
+        "unit": "Milligram",
+        "tag": "FE",
+        "name": "Iron"
       },
       "potassium_mg": {
         "code": "306",
-        "unit": "Milligram"
+        "unit": "Milligram",
+        "tag": "K",
+        "name": "Potassium"
       },
       "preformed_a_ug": {
         "code": "319",
-        "unit": "Microgram"
+        "unit": "Microgram",
+        "tag": "RETOL",
+        "name": "Retinol"
       },
       "synthetic_folic_acid_ug": {
         "code": "431",
-        "unit": "Microgram"
+        "unit": "Microgram",
+        "tag": "FOLAC",
+        "name": "Folic acid"
       }
     },
     "ul_note": "Vitamin E UL applicable forms/sources are not identifiable from these tables; not assessed.",

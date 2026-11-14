@@ -85,7 +85,10 @@ class CNFDataTests(unittest.TestCase):
     def write_table(self, name, rows, fieldnames=None):
         with (self.path / name).open("w", encoding="utf-8-sig", newline="") as f:
             writer = csv.DictWriter(
-                f, fieldnames=fieldnames if fieldnames is not None else self.tables[name][0].keys()
+                f,
+                fieldnames=fieldnames
+                if fieldnames is not None
+                else self.tables[name][0].keys(),
             )
             writer.writeheader()
             writer.writerows(rows)
@@ -178,7 +181,9 @@ class CNFDataTests(unittest.TestCase):
 
     def test_standard_tag_has_priority_over_english_name(self):
         rows = copy.deepcopy(self.tables["nutrient_name.csv"])
-        next(r for r in rows if r["Tagname"] == "PROCNT")["Nutrient_Name_EN"] = "Renamed protein"
+        next(r for r in rows if r["Tagname"] == "PROCNT")["Nutrient_Name_EN"] = (
+            "Renamed protein"
+        )
         self.write_table("nutrient_name.csv", rows)
         foods, _ = load_foods(self.path)
         self.assertEqual(foods, self.foods)
@@ -192,7 +197,9 @@ class CNFDataTests(unittest.TestCase):
                         row.pop("Tagname")
                     else:
                         row["Tagname"] = ""
-                    row["Nutrient_Name_EN"] = "  " + row["Nutrient_Name_EN"].upper() + "  "
+                    row["Nutrient_Name_EN"] = (
+                        "  " + row["Nutrient_Name_EN"].upper() + "  "
+                    )
                 self.write_table("nutrient_name.csv", rows, fieldnames=rows[0].keys())
                 foods, _ = load_foods(self.path)
                 self.assertEqual(foods, self.foods)

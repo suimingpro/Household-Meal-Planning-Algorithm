@@ -130,18 +130,23 @@ def resolve_nutrient_map(
     used_codes = {}
     for field, (tag, name, expected_unit) in NUTRIENT_SPECS.items():
         matches = [
-            code for code, row in nutrient_names.items()
+            code
+            for code, row in nutrient_names.items()
             if _normalize_label(row.get("Tagname")) == _normalize_label(tag)
         ]
         if not matches:
             matches = [
-                code for code, row in nutrient_names.items()
-                if _normalize_label(row.get("Nutrient_Name_EN")) == _normalize_label(name)
+                code
+                for code, row in nutrient_names.items()
+                if _normalize_label(row.get("Nutrient_Name_EN"))
+                == _normalize_label(name)
             ]
         if not matches:
             raise ValueError(f"CNF nutrient not found: {field}, tag={tag}, name={name}")
         if len(matches) != 1:
-            raise ValueError(f"Ambiguous CNF nutrient: {field}, matching codes={matches}")
+            raise ValueError(
+                f"Ambiguous CNF nutrient: {field}, matching codes={matches}"
+            )
         code = matches[0]
         unit = nutrient_names[code].get("Nutrient_Unit", "").strip()
         if _normalize_label(unit) != _normalize_label(expected_unit):
@@ -150,7 +155,9 @@ def resolve_nutrient_map(
                 f"expected {expected_unit}, got {unit}"
             )
         if code in used_codes:
-            raise ValueError(f"CNF nutrient code reused: {code}, {used_codes[code]} and {field}")
+            raise ValueError(
+                f"CNF nutrient code reused: {code}, {used_codes[code]} and {field}"
+            )
         used_codes[code] = field
         resolved[field] = (code, unit)
     return resolved
@@ -320,9 +327,12 @@ def load_cnf_data(
         "candidate_file": str(candidates_path),
         "food_records": provenance,
         "nutrient_mapping": {
-            field: {"code": code, "unit": unit,
-                    "tag": nutrient_names[code].get("Tagname"),
-                    "name": nutrient_names[code].get("Nutrient_Name_EN")}
+            field: {
+                "code": code,
+                "unit": unit,
+                "tag": nutrient_names[code].get("Tagname"),
+                "name": nutrient_names[code].get("Nutrient_Name_EN"),
+            }
             for field, (code, unit) in nutrient_map.items()
         },
         "ul_note": "Vitamin E UL applicable forms/sources are not identifiable from these tables; not assessed.",
