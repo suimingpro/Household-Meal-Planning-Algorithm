@@ -218,3 +218,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local study outputs (the full checked-in results are retained)
+experiments/quick_results/
+reproduced_results/
+my_plan.json

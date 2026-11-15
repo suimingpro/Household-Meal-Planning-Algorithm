@@ -1,0 +1,6 @@
+first,second,mean_final_fitness_difference,first_wins,ties,second_wins
+default_ea,random_search,2.5800944519617217,10,0,0
+default_ea,no_crossover,0.264787947317177,10,0,0
+default_ea,no_portion_mutation,0.012356108499650987,5,5,0
+no_salmon_ea,no_salmon_random,4.020279268418956,10,0,0
+default_ea,no_salmon_ea,1.131377485880617,10,0,0

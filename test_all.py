@@ -11,7 +11,10 @@ from dataclasses import asdict
 from pathlib import Path
 from unittest.mock import Mock
 
-import torch
+try:
+    import torch
+except ImportError:
+    torch = None
 
 from cnf_data import csv_rows, load_cnf_data
 from device_utils import resolve_device
@@ -85,10 +88,7 @@ class CNFDataTests(unittest.TestCase):
     def write_table(self, name, rows, fieldnames=None):
         with (self.path / name).open("w", encoding="utf-8-sig", newline="") as f:
             writer = csv.DictWriter(
-                f,
-                fieldnames=fieldnames
-                if fieldnames is not None
-                else self.tables[name][0].keys(),
+                f, fieldnames=fieldnames if fieldnames is not None else self.tables[name][0].keys()
             )
             writer.writeheader()
             writer.writerows(rows)
@@ -181,9 +181,7 @@ class CNFDataTests(unittest.TestCase):
 
     def test_standard_tag_has_priority_over_english_name(self):
         rows = copy.deepcopy(self.tables["nutrient_name.csv"])
-        next(r for r in rows if r["Tagname"] == "PROCNT")["Nutrient_Name_EN"] = (
-            "Renamed protein"
-        )
+        next(r for r in rows if r["Tagname"] == "PROCNT")["Nutrient_Name_EN"] = "Renamed protein"
         self.write_table("nutrient_name.csv", rows)
         foods, _ = load_foods(self.path)
         self.assertEqual(foods, self.foods)
@@ -197,9 +195,7 @@ class CNFDataTests(unittest.TestCase):
                         row.pop("Tagname")
                     else:
                         row["Tagname"] = ""
-                    row["Nutrient_Name_EN"] = (
-                        "  " + row["Nutrient_Name_EN"].upper() + "  "
-                    )
+                    row["Nutrient_Name_EN"] = "  " + row["Nutrient_Name_EN"].upper() + "  "
                 self.write_table("nutrient_name.csv", rows, fieldnames=rows[0].keys())
                 foods, _ = load_foods(self.path)
                 self.assertEqual(foods, self.foods)
@@ -724,9 +720,13 @@ class TorchFitnessTests(unittest.TestCase):
         population = [self.ga.initialize() for _ in range(4)]
         grams = self.ga.population_weights(population)
         self.assertEqual(grams.shape, (4, 2, 30))
-        self.assertEqual(grams.dtype, torch.float64)
-        self.assertEqual(grams.device.type, "cpu")
-        self.assertFalse(grams.requires_grad)
+        if self.ga.backend == "torch":
+            self.assertEqual(grams.dtype, torch.float64)
+            self.assertEqual(grams.device.type, "cpu")
+            self.assertFalse(grams.requires_grad)
+        else:
+            self.assertEqual(str(grams.dtype), "float64")
+            self.assertEqual(self.ga.backend_info()["device"], "cpu")
         for b, individual in enumerate(population):
             for p in range(2):
                 expected = sum(g for _, _, _, g in self.ga.portions(individual, p))
@@ -790,6 +790,7 @@ class TorchFitnessTests(unittest.TestCase):
             asdict(new), asdict(scalar_reference(self.ga, individual))
         )
 
+    @unittest.skipIf(torch is None, "Optional PyTorch backend is not installed")
     def test_auto_device_and_unsupported_device(self):
         auto = resolve_device("auto")
         self.assertEqual(auto.type, "cuda" if torch.cuda.is_available() else "cpu")
@@ -800,7 +801,7 @@ class TorchFitnessTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "CUDA is not available"):
                 resolve_device("cuda")
 
-    @unittest.skipUnless(torch.cuda.is_available(), "CUDA is not available")
+    @unittest.skipUnless(torch is not None and torch.cuda.is_available(), "CUDA is not available")
     def test_cuda_matches_cpu(self):
         gpu = MealGA(self.foods, self.people, Config(device="cuda"), seed=29)
         population = [self.ga.initialize() for _ in range(8)]
