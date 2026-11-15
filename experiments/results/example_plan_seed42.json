@@ -1,0 +1,1239 @@
+{
+  "condition": "default_ea",
+  "seed": 42,
+  "backend": {
+    "framework": "numpy",
+    "version": "2.3.5",
+    "device": "cpu",
+    "dtype": "float64"
+  },
+  "config": {
+    "population_size": 100,
+    "generations": 50,
+    "elite_count": 2,
+    "staple_fraction": 0.8,
+    "meal_shares": [
+      0.25,
+      0.4,
+      0.35
+    ],
+    "side_budgets_g": [
+      150,
+      250,
+      200
+    ],
+    "portion_mutation_probability": 0.3,
+    "crossover_probability": 1.0,
+    "staple_mutation_probability": 0.0,
+    "excess_penalty": 10.0,
+    "device": "cpu"
+  },
+  "members": [
+    {
+      "name": "成人A",
+      "age": 30,
+      "reference_group": "male",
+      "weight_kg": 75,
+      "energy_kcal": 2400
+    },
+    {
+      "name": "成人B",
+      "age": 28,
+      "reference_group": "female",
+      "weight_kg": 60,
+      "energy_kcal": 2000
+    },
+    {
+      "name": "成人C",
+      "age": 45,
+      "reference_group": "female",
+      "weight_kg": 65,
+      "energy_kcal": 1800
+    }
+  ],
+  "plan": {
+    "base_score": 100.00000000000001,
+    "fitness": 100.00000000000001,
+    "normalized_ul_excess": 0.0,
+    "ul_status": "not_fully_assessed",
+    "meals": [
+      {
+        "meal": "breakfast",
+        "staple": {
+          "id": "4066",
+          "name": "白面包（市售）",
+          "person_weights_g": [
+            134.11908148750254,
+            111.76590123958545,
+            100.58931111562693
+          ]
+        },
+        "dishes": [
+          {
+            "total_weight_g": 164.5968355842401,
+            "ingredients": [
+              {
+                "id": "3404",
+                "name": "普通豆腐（硬或特硬）",
+                "percent": 30,
+                "household_weight_g": 49.379050675272026
+              },
+              {
+                "id": "422",
+                "name": "橄榄油",
+                "percent": 70,
+                "household_weight_g": 115.21778490896807
+              }
+            ]
+          },
+          {
+            "total_weight_g": 183.7076974659957,
+            "ingredients": [
+              {
+                "id": "422",
+                "name": "橄榄油",
+                "percent": 30,
+                "household_weight_g": 55.112309239798705
+              },
+              {
+                "id": "3404",
+                "name": "普通豆腐（硬或特硬）",
+                "percent": 30,
+                "household_weight_g": 55.112309239798705
+              },
+              {
+                "id": "2214",
+                "name": "菠菜（水煮沥干）",
+                "percent": 40,
+                "household_weight_g": 73.48307898639828
+              }
+            ]
+          },
+          {
+            "total_weight_g": 176.25648725390727,
+            "ingredients": [
+              {
+                "id": "2214",
+                "name": "菠菜（水煮沥干）",
+                "percent": 100,
+                "household_weight_g": 176.25648725390727
+              }
+            ]
+          }
+        ],
+        "fruit": {
+          "person_weights_g": [
+            87.16842353062968,
+            87.16842353062968,
+            87.16842353062968
+          ],
+          "ingredients": [
+            {
+              "id": "1585",
+              "name": "猕猴桃（生）",
+              "percent": 100
+            }
+          ]
+        }
+      },
+      {
+        "meal": "lunch",
+        "staple": {
+          "id": "4066",
+          "name": "白面包（市售）",
+          "person_weights_g": [
+            214.59053038000405,
+            178.82544198333673,
+            160.94289778500308
+          ]
+        },
+        "dishes": [
+          {
+            "total_weight_g": 269.8289936000738,
+            "ingredients": [
+              {
+                "id": "6961",
+                "name": "原味酸奶（2–3.9%乳脂）",
+                "percent": 100,
+                "household_weight_g": 269.8289936000738
+              }
+            ]
+          },
+          {
+            "total_weight_g": 226.30362396670222,
+            "ingredients": [
+              {
+                "id": "3053",
+                "name": "红鲑鱼（烤制）",
+                "percent": 60,
+                "household_weight_g": 135.78217438002133
+              },
+              {
+                "id": "3404",
+                "name": "普通豆腐（硬或特硬）",
+                "percent": 40,
+                "household_weight_g": 90.52144958668089
+              }
+            ]
+          },
+          {
+            "total_weight_g": 194.1472940576302,
+            "ingredients": [
+              {
+                "id": "2214",
+                "name": "菠菜（水煮沥干）",
+                "percent": 100,
+                "household_weight_g": 194.1472940576302
+              }
+            ]
+          },
+          {
+            "total_weight_g": 224.00791428185207,
+            "ingredients": [
+              {
+                "id": "2214",
+                "name": "菠菜（水煮沥干）",
+                "percent": 30,
+                "household_weight_g": 67.20237428455562
+              },
+              {
+                "id": "2381",
+                "name": "胡萝卜（水煮沥干）",
+                "percent": 40,
+                "household_weight_g": 89.60316571274083
+              },
+              {
+                "id": "3053",
+                "name": "红鲑鱼（烤制）",
+                "percent": 30,
+                "household_weight_g": 67.20237428455562
+              }
+            ]
+          }
+        ],
+        "fruit": {
+          "person_weights_g": [
+            80.26745441304244,
+            80.26745441304244,
+            80.26745441304244
+          ],
+          "ingredients": [
+            {
+              "id": "1616",
+              "name": "脐橙（生）",
+              "percent": 100
+            }
+          ]
+        }
+      },
+      {
+        "meal": "dinner",
+        "staple": {
+          "id": "4066",
+          "name": "白面包（市售）",
+          "person_weights_g": [
+            187.76671408250354,
+            156.47226173541964,
+            140.82503556187768
+          ]
+        },
+        "dishes": [
+          {
+            "total_weight_g": 260.8850910740943,
+            "ingredients": [
+              {
+                "id": "2381",
+                "name": "胡萝卜（水煮沥干）",
+                "percent": 30,
+                "household_weight_g": 78.26552732222828
+              },
+              {
+                "id": "2242",
+                "name": "红薯（去皮水煮）",
+                "percent": 70,
+                "household_weight_g": 182.619563751866
+              }
+            ]
+          },
+          {
+            "total_weight_g": 229.98062278032316,
+            "ingredients": [
+              {
+                "id": "6961",
+                "name": "原味酸奶（2–3.9%乳脂）",
+                "percent": 100,
+                "household_weight_g": 229.98062278032316
+              }
+            ]
+          },
+          {
+            "total_weight_g": 269.75241065931283,
+            "ingredients": [
+              {
+                "id": "3053",
+                "name": "红鲑鱼（烤制）",
+                "percent": 30,
+                "household_weight_g": 80.92572319779386
+              },
+              {
+                "id": "2242",
+                "name": "红薯（去皮水煮）",
+                "percent": 20,
+                "household_weight_g": 53.950482131862564
+              },
+              {
+                "id": "3404",
+                "name": "普通豆腐（硬或特硬）",
+                "percent": 50,
+                "household_weight_g": 134.87620532965641
+              }
+            ]
+          }
+        ],
+        "fruit": {
+          "person_weights_g": [
+            82.56412205632789,
+            82.56412205632789,
+            82.56412205632789
+          ],
+          "ingredients": [
+            {
+              "id": "1585",
+              "name": "猕猴桃（生）",
+              "percent": 100
+            }
+          ]
+        }
+      }
+    ],
+    "people": [
+      {
+        "name": "成人A",
+        "totals": {
+          "energy_kcal": 2633.1368319137414,
+          "carbohydrate_g": 338.1535798533635,
+          "protein_g": 108.86918346455944,
+          "fat_g": 97.24438739961957,
+          "vitamin_a_rae_ug": 2418.2780746557137,
+          "vitamin_c_mg": 239.45231980355,
+          "vitamin_d_ug": 20.123797192157326,
+          "vitamin_e_mg": 19.73758562275442,
+          "folate_dfe_ug": 1369.1848282857422,
+          "calcium_mg": 1305.2587169218582,
+          "iron_mg": 31.27665186461076,
+          "potassium_mg": 3543.669576276019,
+          "preformed_a_ug": 90.82889186068283,
+          "ul_applicable_e_mg": null,
+          "synthetic_folic_acid_ug": 520.3820361715099
+        },
+        "targets": {
+          "carbohydrate_g": 330.0,
+          "protein_g": 60.0,
+          "fat_g": 73.33333333333333,
+          "vitamin_a_rae_ug": 900,
+          "vitamin_c_mg": 90,
+          "vitamin_d_ug": 15,
+          "vitamin_e_mg": 15,
+          "folate_dfe_ug": 400,
+          "calcium_mg": 1000,
+          "iron_mg": 8,
+          "potassium_mg": 3400
+        },
+        "scores": {
+          "carbohydrate_g": 20.0,
+          "protein_g": 20.0,
+          "fat_g": 20.0,
+          "vitamin_a_rae_ug": 4.0,
+          "vitamin_c_mg": 4.0,
+          "vitamin_d_ug": 4.0,
+          "vitamin_e_mg": 4.0,
+          "folate_dfe_ug": 4.0,
+          "calcium_mg": 6.666666666666667,
+          "iron_mg": 6.666666666666667,
+          "potassium_mg": 6.666666666666667
+        },
+        "score": 100.00000000000001,
+        "deficits": {
+          "carbohydrate_g": 0.0,
+          "protein_g": 0.0,
+          "fat_g": 0.0,
+          "vitamin_a_rae_ug": 0.0,
+          "vitamin_c_mg": 0.0,
+          "vitamin_d_ug": 0.0,
+          "vitamin_e_mg": 0.0,
+          "folate_dfe_ug": 0.0,
+          "calcium_mg": 0.0,
+          "iron_mg": 0.0,
+          "potassium_mg": 0.0
+        },
+        "ul_checks": {
+          "preformed_a_ug": {
+            "actual": 90.82889186068283,
+            "limit": 3000,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 90.82889186068283,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "vitamin_c_mg": {
+            "actual": 239.45231980355,
+            "limit": 2000,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 239.45231980355,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "vitamin_d_ug": {
+            "actual": 20.123797192157326,
+            "limit": 100,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 20.123797192157326,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "ul_applicable_e_mg": {
+            "actual": null,
+            "limit": 1000,
+            "excess_ratio": null,
+            "known_lower_bound": 0.0,
+            "fully_assessed": false,
+            "status": "not_assessed"
+          },
+          "synthetic_folic_acid_ug": {
+            "actual": 520.3820361715099,
+            "limit": 1000,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 520.3820361715099,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "calcium_mg": {
+            "actual": 1305.2587169218582,
+            "limit": 2500,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 1305.2587169218582,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "iron_mg": {
+            "actual": 31.27665186461076,
+            "limit": 45,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 31.27665186461076,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          }
+        },
+        "score_rounded": 100,
+        "scores_rounded": {
+          "carbohydrate_g": 20,
+          "protein_g": 20,
+          "fat_g": 20,
+          "vitamin_a_rae_ug": 4,
+          "vitamin_c_mg": 4,
+          "vitamin_d_ug": 4,
+          "vitamin_e_mg": 4,
+          "folate_dfe_ug": 4,
+          "calcium_mg": 7,
+          "iron_mg": 7,
+          "potassium_mg": 7
+        },
+        "portions": [
+          {
+            "meal": "breakfast",
+            "module": "staple",
+            "id": "4066",
+            "name": "白面包（市售）",
+            "weight_g": 134.11908148750254
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_1",
+            "id": "3404",
+            "name": "普通豆腐（硬或特硬）",
+            "weight_g": 19.114471229137557
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_1",
+            "id": "422",
+            "name": "橄榄油",
+            "weight_g": 44.600432867987635
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_2",
+            "id": "422",
+            "name": "橄榄油",
+            "weight_g": 21.333797125083372
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_2",
+            "id": "3404",
+            "name": "普通豆腐（硬或特硬）",
+            "weight_g": 21.333797125083372
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_2",
+            "id": "2214",
+            "name": "菠菜（水煮沥干）",
+            "weight_g": 28.445062833444496
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_3",
+            "id": "2214",
+            "name": "菠菜（水煮沥干）",
+            "weight_g": 68.22831764667377
+          },
+          {
+            "meal": "breakfast",
+            "module": "fruit",
+            "id": "1585",
+            "name": "猕猴桃（生）",
+            "weight_g": 87.16842353062968
+          },
+          {
+            "meal": "lunch",
+            "module": "staple",
+            "id": "4066",
+            "name": "白面包（市售）",
+            "weight_g": 214.59053038000405
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_1",
+            "id": "6961",
+            "name": "原味酸奶（2–3.9%乳脂）",
+            "weight_g": 104.44993300648017
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_2",
+            "id": "3053",
+            "name": "红鲑鱼（烤制）",
+            "weight_g": 52.56084169549213
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_2",
+            "id": "3404",
+            "name": "普通豆腐（硬或特硬）",
+            "weight_g": 35.040561130328086
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_3",
+            "id": "2214",
+            "name": "菠菜（水煮沥干）",
+            "weight_g": 75.15379124811491
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_4",
+            "id": "2214",
+            "name": "菠菜（水煮沥干）",
+            "weight_g": 26.013822303698948
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_4",
+            "id": "2381",
+            "name": "胡萝卜（水煮沥干）",
+            "weight_g": 34.68509640493193
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_4",
+            "id": "3053",
+            "name": "红鲑鱼（烤制）",
+            "weight_g": 26.013822303698948
+          },
+          {
+            "meal": "lunch",
+            "module": "fruit",
+            "id": "1616",
+            "name": "脐橙（生）",
+            "weight_g": 80.26745441304244
+          },
+          {
+            "meal": "dinner",
+            "module": "staple",
+            "id": "4066",
+            "name": "白面包（市售）",
+            "weight_g": 187.76671408250354
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_1",
+            "id": "2381",
+            "name": "胡萝卜（水煮沥干）",
+            "weight_g": 30.296333156991597
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_1",
+            "id": "2242",
+            "name": "红薯（去皮水煮）",
+            "weight_g": 70.6914440329804
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_2",
+            "id": "6961",
+            "name": "原味酸奶（2–3.9%乳脂）",
+            "weight_g": 89.02475720528638
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_3",
+            "id": "3053",
+            "name": "红鲑鱼（烤制）",
+            "weight_g": 31.326086399146003
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_3",
+            "id": "2242",
+            "name": "红薯（去皮水煮）",
+            "weight_g": 20.88405759943067
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_3",
+            "id": "3404",
+            "name": "普通豆腐（硬或特硬）",
+            "weight_g": 52.210143998576676
+          },
+          {
+            "meal": "dinner",
+            "module": "fruit",
+            "id": "1585",
+            "name": "猕猴桃（生）",
+            "weight_g": 82.56412205632789
+          }
+        ]
+      },
+      {
+        "name": "成人B",
+        "totals": {
+          "energy_kcal": 2218.092010839857,
+          "carbohydrate_g": 287.61937153887675,
+          "protein_g": 91.16855036294122,
+          "fat_g": 81.20415790279493,
+          "vitamin_a_rae_ug": 2017.9686282719354,
+          "vitamin_c_mg": 233.6736223891613,
+          "vitamin_d_ug": 16.76983099346444,
+          "vitamin_e_mg": 16.88107074349354,
+          "folate_dfe_ug": 1152.608035387648,
+          "calcium_mg": 1103.0862759177442,
+          "iron_mg": 26.168962984185058,
+          "potassium_mg": 3063.5262329895086,
+          "preformed_a_ug": 75.69074321723569,
+          "ul_applicable_e_mg": null,
+          "synthetic_folic_acid_ug": 433.65169680959156
+        },
+        "targets": {
+          "carbohydrate_g": 275.0,
+          "protein_g": 48.0,
+          "fat_g": 61.111111111111114,
+          "vitamin_a_rae_ug": 700,
+          "vitamin_c_mg": 75,
+          "vitamin_d_ug": 15,
+          "vitamin_e_mg": 15,
+          "folate_dfe_ug": 400,
+          "calcium_mg": 1000,
+          "iron_mg": 18,
+          "potassium_mg": 2600
+        },
+        "scores": {
+          "carbohydrate_g": 20.0,
+          "protein_g": 20.0,
+          "fat_g": 20.0,
+          "vitamin_a_rae_ug": 4.0,
+          "vitamin_c_mg": 4.0,
+          "vitamin_d_ug": 4.0,
+          "vitamin_e_mg": 4.0,
+          "folate_dfe_ug": 4.0,
+          "calcium_mg": 6.666666666666667,
+          "iron_mg": 6.666666666666667,
+          "potassium_mg": 6.666666666666667
+        },
+        "score": 100.00000000000001,
+        "deficits": {
+          "carbohydrate_g": 0.0,
+          "protein_g": 0.0,
+          "fat_g": 0.0,
+          "vitamin_a_rae_ug": 0.0,
+          "vitamin_c_mg": 0.0,
+          "vitamin_d_ug": 0.0,
+          "vitamin_e_mg": 0.0,
+          "folate_dfe_ug": 0.0,
+          "calcium_mg": 0.0,
+          "iron_mg": 0.0,
+          "potassium_mg": 0.0
+        },
+        "ul_checks": {
+          "preformed_a_ug": {
+            "actual": 75.69074321723569,
+            "limit": 3000,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 75.69074321723569,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "vitamin_c_mg": {
+            "actual": 233.6736223891613,
+            "limit": 2000,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 233.6736223891613,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "vitamin_d_ug": {
+            "actual": 16.76983099346444,
+            "limit": 100,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 16.76983099346444,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "ul_applicable_e_mg": {
+            "actual": null,
+            "limit": 1000,
+            "excess_ratio": null,
+            "known_lower_bound": 0.0,
+            "fully_assessed": false,
+            "status": "not_assessed"
+          },
+          "synthetic_folic_acid_ug": {
+            "actual": 433.65169680959156,
+            "limit": 1000,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 433.65169680959156,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "calcium_mg": {
+            "actual": 1103.0862759177442,
+            "limit": 2500,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 1103.0862759177442,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "iron_mg": {
+            "actual": 26.168962984185058,
+            "limit": 45,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 26.168962984185058,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          }
+        },
+        "score_rounded": 100,
+        "scores_rounded": {
+          "carbohydrate_g": 20,
+          "protein_g": 20,
+          "fat_g": 20,
+          "vitamin_a_rae_ug": 4,
+          "vitamin_c_mg": 4,
+          "vitamin_d_ug": 4,
+          "vitamin_e_mg": 4,
+          "folate_dfe_ug": 4,
+          "calcium_mg": 7,
+          "iron_mg": 7,
+          "potassium_mg": 7
+        },
+        "portions": [
+          {
+            "meal": "breakfast",
+            "module": "staple",
+            "id": "4066",
+            "name": "白面包（市售）",
+            "weight_g": 111.76590123958545
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_1",
+            "id": "3404",
+            "name": "普通豆腐（硬或特硬）",
+            "weight_g": 15.928726024281298
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_1",
+            "id": "422",
+            "name": "橄榄油",
+            "weight_g": 37.1670273899897
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_2",
+            "id": "422",
+            "name": "橄榄油",
+            "weight_g": 17.77816427090281
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_2",
+            "id": "3404",
+            "name": "普通豆腐（硬或特硬）",
+            "weight_g": 17.77816427090281
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_2",
+            "id": "2214",
+            "name": "菠菜（水煮沥干）",
+            "weight_g": 23.704219027870412
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_3",
+            "id": "2214",
+            "name": "菠菜（水煮沥干）",
+            "weight_g": 56.856931372228146
+          },
+          {
+            "meal": "breakfast",
+            "module": "fruit",
+            "id": "1585",
+            "name": "猕猴桃（生）",
+            "weight_g": 87.16842353062968
+          },
+          {
+            "meal": "lunch",
+            "module": "staple",
+            "id": "4066",
+            "name": "白面包（市售）",
+            "weight_g": 178.82544198333673
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_1",
+            "id": "6961",
+            "name": "原味酸奶（2–3.9%乳脂）",
+            "weight_g": 87.04161083873348
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_2",
+            "id": "3053",
+            "name": "红鲑鱼（烤制）",
+            "weight_g": 43.80070141291011
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_2",
+            "id": "3404",
+            "name": "普通豆腐（硬或特硬）",
+            "weight_g": 29.200467608606736
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_3",
+            "id": "2214",
+            "name": "菠菜（水煮沥干）",
+            "weight_g": 62.62815937342909
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_4",
+            "id": "2214",
+            "name": "菠菜（水煮沥干）",
+            "weight_g": 21.678185253082454
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_4",
+            "id": "2381",
+            "name": "胡萝卜（水煮沥干）",
+            "weight_g": 28.90424700410994
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_4",
+            "id": "3053",
+            "name": "红鲑鱼（烤制）",
+            "weight_g": 21.678185253082454
+          },
+          {
+            "meal": "lunch",
+            "module": "fruit",
+            "id": "1616",
+            "name": "脐橙（生）",
+            "weight_g": 80.26745441304244
+          },
+          {
+            "meal": "dinner",
+            "module": "staple",
+            "id": "4066",
+            "name": "白面包（市售）",
+            "weight_g": 156.47226173541964
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_1",
+            "id": "2381",
+            "name": "胡萝卜（水煮沥干）",
+            "weight_g": 25.246944297492995
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_1",
+            "id": "2242",
+            "name": "红薯（去皮水煮）",
+            "weight_g": 58.909536694150326
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_2",
+            "id": "6961",
+            "name": "原味酸奶（2–3.9%乳脂）",
+            "weight_g": 74.18729767107199
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_3",
+            "id": "3053",
+            "name": "红鲑鱼（烤制）",
+            "weight_g": 26.105071999288338
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_3",
+            "id": "2242",
+            "name": "红薯（去皮水煮）",
+            "weight_g": 17.403381332858892
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_3",
+            "id": "3404",
+            "name": "普通豆腐（硬或特硬）",
+            "weight_g": 43.508453332147226
+          },
+          {
+            "meal": "dinner",
+            "module": "fruit",
+            "id": "1585",
+            "name": "猕猴桃（生）",
+            "weight_g": 82.56412205632789
+          }
+        ]
+      },
+      {
+        "name": "成人C",
+        "totals": {
+          "energy_kcal": 2010.569600302915,
+          "carbohydrate_g": 262.35226738163345,
+          "protein_g": 82.31823381213209,
+          "fat_g": 73.18404315438262,
+          "vitamin_a_rae_ug": 1817.8139050800464,
+          "vitamin_c_mg": 230.784273681967,
+          "vitamin_d_ug": 15.092847894117995,
+          "vitamin_e_mg": 15.452813303863108,
+          "folate_dfe_ug": 1044.3196389386005,
+          "calcium_mg": 1002.0000554156873,
+          "iron_mg": 23.61511854397221,
+          "potassium_mg": 2823.454561346254,
+          "preformed_a_ug": 68.12166889551212,
+          "ul_applicable_e_mg": null,
+          "synthetic_folic_acid_ug": 390.2865271286325
+        },
+        "targets": {
+          "carbohydrate_g": 247.50000000000003,
+          "protein_g": 52.0,
+          "fat_g": 55.00000000000001,
+          "vitamin_a_rae_ug": 700,
+          "vitamin_c_mg": 75,
+          "vitamin_d_ug": 15,
+          "vitamin_e_mg": 15,
+          "folate_dfe_ug": 400,
+          "calcium_mg": 1000,
+          "iron_mg": 18,
+          "potassium_mg": 2600
+        },
+        "scores": {
+          "carbohydrate_g": 20.0,
+          "protein_g": 20.0,
+          "fat_g": 20.0,
+          "vitamin_a_rae_ug": 4.0,
+          "vitamin_c_mg": 4.0,
+          "vitamin_d_ug": 4.0,
+          "vitamin_e_mg": 4.0,
+          "folate_dfe_ug": 4.0,
+          "calcium_mg": 6.666666666666667,
+          "iron_mg": 6.666666666666667,
+          "potassium_mg": 6.666666666666667
+        },
+        "score": 100.00000000000001,
+        "deficits": {
+          "carbohydrate_g": 0.0,
+          "protein_g": 0.0,
+          "fat_g": 0.0,
+          "vitamin_a_rae_ug": 0.0,
+          "vitamin_c_mg": 0.0,
+          "vitamin_d_ug": 0.0,
+          "vitamin_e_mg": 0.0,
+          "folate_dfe_ug": 0.0,
+          "calcium_mg": 0.0,
+          "iron_mg": 0.0,
+          "potassium_mg": 0.0
+        },
+        "ul_checks": {
+          "preformed_a_ug": {
+            "actual": 68.12166889551212,
+            "limit": 3000,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 68.12166889551212,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "vitamin_c_mg": {
+            "actual": 230.784273681967,
+            "limit": 2000,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 230.784273681967,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "vitamin_d_ug": {
+            "actual": 15.092847894117995,
+            "limit": 100,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 15.092847894117995,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "ul_applicable_e_mg": {
+            "actual": null,
+            "limit": 1000,
+            "excess_ratio": null,
+            "known_lower_bound": 0.0,
+            "fully_assessed": false,
+            "status": "not_assessed"
+          },
+          "synthetic_folic_acid_ug": {
+            "actual": 390.2865271286325,
+            "limit": 1000,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 390.2865271286325,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "calcium_mg": {
+            "actual": 1002.0000554156873,
+            "limit": 2500,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 1002.0000554156873,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          },
+          "iron_mg": {
+            "actual": 23.61511854397221,
+            "limit": 45,
+            "excess_ratio": 0.0,
+            "known_lower_bound": 23.61511854397221,
+            "fully_assessed": true,
+            "status": "checked_no_excess"
+          }
+        },
+        "score_rounded": 100,
+        "scores_rounded": {
+          "carbohydrate_g": 20,
+          "protein_g": 20,
+          "fat_g": 20,
+          "vitamin_a_rae_ug": 4,
+          "vitamin_c_mg": 4,
+          "vitamin_d_ug": 4,
+          "vitamin_e_mg": 4,
+          "folate_dfe_ug": 4,
+          "calcium_mg": 7,
+          "iron_mg": 7,
+          "potassium_mg": 7
+        },
+        "portions": [
+          {
+            "meal": "breakfast",
+            "module": "staple",
+            "id": "4066",
+            "name": "白面包（市售）",
+            "weight_g": 100.58931111562693
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_1",
+            "id": "3404",
+            "name": "普通豆腐（硬或特硬）",
+            "weight_g": 14.33585342185317
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_1",
+            "id": "422",
+            "name": "橄榄油",
+            "weight_g": 33.45032465099074
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_2",
+            "id": "422",
+            "name": "橄榄油",
+            "weight_g": 16.000347843812527
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_2",
+            "id": "3404",
+            "name": "普通豆腐（硬或特硬）",
+            "weight_g": 16.000347843812527
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_2",
+            "id": "2214",
+            "name": "菠菜（水煮沥干）",
+            "weight_g": 21.333797125083372
+          },
+          {
+            "meal": "breakfast",
+            "module": "dish_3",
+            "id": "2214",
+            "name": "菠菜（水煮沥干）",
+            "weight_g": 51.17123823500534
+          },
+          {
+            "meal": "breakfast",
+            "module": "fruit",
+            "id": "1585",
+            "name": "猕猴桃（生）",
+            "weight_g": 87.16842353062968
+          },
+          {
+            "meal": "lunch",
+            "module": "staple",
+            "id": "4066",
+            "name": "白面包（市售）",
+            "weight_g": 160.94289778500308
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_1",
+            "id": "6961",
+            "name": "原味酸奶（2–3.9%乳脂）",
+            "weight_g": 78.33744975486013
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_2",
+            "id": "3053",
+            "name": "红鲑鱼（烤制）",
+            "weight_g": 39.420631271619094
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_2",
+            "id": "3404",
+            "name": "普通豆腐（硬或特硬）",
+            "weight_g": 26.280420847746065
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_3",
+            "id": "2214",
+            "name": "菠菜（水煮沥干）",
+            "weight_g": 56.365343436086185
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_4",
+            "id": "2214",
+            "name": "菠菜（水煮沥干）",
+            "weight_g": 19.510366727774215
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_4",
+            "id": "2381",
+            "name": "胡萝卜（水煮沥干）",
+            "weight_g": 26.01382230369895
+          },
+          {
+            "meal": "lunch",
+            "module": "dish_4",
+            "id": "3053",
+            "name": "红鲑鱼（烤制）",
+            "weight_g": 19.510366727774215
+          },
+          {
+            "meal": "lunch",
+            "module": "fruit",
+            "id": "1616",
+            "name": "脐橙（生）",
+            "weight_g": 80.26745441304244
+          },
+          {
+            "meal": "dinner",
+            "module": "staple",
+            "id": "4066",
+            "name": "白面包（市售）",
+            "weight_g": 140.82503556187768
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_1",
+            "id": "2381",
+            "name": "胡萝卜（水煮沥干）",
+            "weight_g": 22.7222498677437
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_1",
+            "id": "2242",
+            "name": "红薯（去皮水煮）",
+            "weight_g": 53.01858302473529
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_2",
+            "id": "6961",
+            "name": "原味酸奶（2–3.9%乳脂）",
+            "weight_g": 66.7685679039648
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_3",
+            "id": "3053",
+            "name": "红鲑鱼（烤制）",
+            "weight_g": 23.494564799359505
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_3",
+            "id": "2242",
+            "name": "红薯（去皮水煮）",
+            "weight_g": 15.663043199573005
+          },
+          {
+            "meal": "dinner",
+            "module": "dish_3",
+            "id": "3404",
+            "name": "普通豆腐（硬或特硬）",
+            "weight_g": 39.15760799893251
+          },
+          {
+            "meal": "dinner",
+            "module": "fruit",
+            "id": "1585",
+            "name": "猕猴桃（生）",
+            "weight_g": 82.56412205632789
+          }
+        ]
+      }
+    ]
+  }
+}

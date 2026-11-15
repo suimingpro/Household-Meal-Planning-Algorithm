@@ -51,6 +51,7 @@ def evolve(ga: MealGA) -> tuple[list[tuple[Individual, Evaluation]], list[dict[s
                 "generation": generation,
                 "best_score": best.base_score,
                 "best_fitness": best.fitness,
+                "best_excess": best.excess,
                 "best_ul_status": best.ul_status,
                 "max_score": max(e.base_score for e in evaluations),
                 "mean_score": sum(e.base_score for e in evaluations)
