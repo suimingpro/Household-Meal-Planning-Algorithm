@@ -1,6 +1,6 @@
 {
   "python_version": "3.12.14",
-  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "platform": "Linux-6.18.60-x86_64-with-glibc2.41",
   "backend": {
     "framework": "numpy",
     "version": "2.3.5",
@@ -392,7 +392,7 @@
       "cnf_food_group.csv": "468e10d666551f90c37ab8e8e149dbbc7a76fc0215f74530b8d43fd1eacfe4bb",
       "nutrient_name.csv": "708a942fc8a6a4913b106cd964f4f3b116845ec72942a936477241be8889f785",
       "nutrient_amount.csv": "c53803c72faadbdec9750ccaa1fc9a9cfd8732e0c784d2a66c62cd27d09b22d2",
-      "candidates.json": "e954c4280a3031e9840e6b28c837dd9adc05137e295edbf76e8d15db3eec8322"
+      "candidates.json": "8c6bddd94ac53ae67e58a226aa58beb4c9469386403a343ed925659e40333e6a"
     },
     "people_sha256": "2487f1339c75eb399344b9fb7af3ff14324ccea105581affda81da4d930be192"
   },
@@ -407,5 +407,8 @@
     "synthetic_folic_acid_ug",
     "calcium_mg",
     "iron_mg"
-  ]
+  ],
+  "side_dish_ingredient_caps_pct": {
+    "422": 50
+  }
 }

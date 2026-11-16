@@ -26,6 +26,7 @@ from meal_ga import MealGA, load_foods
 ROOT = Path(__file__).resolve().parents[1]
 SEEDS = (42, *range(101, 110))
 SALMON_ID = "3053"
+OLIVE_OIL_ID = "422"
 TIER = {"checked_no_excess": 0, "not_fully_assessed": 1, "exceeded": 2}
 STYLES = {
     "default_ea": ("Default EA", "#006d77", "-"),
@@ -247,6 +248,13 @@ def run_suite(output, seeds=SEEDS, population=100, generations=50, backend="nump
                 "mean_energy_pct_of_reference": mean(100 * p["totals"]["energy_kcal"] / person.energy_kcal
                                                     for p, person in zip(ev.people, people)),
                 "salmon_g_total": float(salmon_g),
+                "max_olive_oil_dish_pct": max(
+                    (10 * units
+                     for meal in individual.meals for dish in meal.dishes
+                     for fid, units in zip(dish.food_ids, dish.units)
+                     if fid == OLIVE_OIL_ID),
+                    default=0,
+                ),
                 "incomplete_ul_checks": sum(not check["fully_assessed"] for p in ev.people
                                             for check in p["ul_checks"].values()),
                 "runtime_s": elapsed,
@@ -314,6 +322,9 @@ def run_suite(output, seeds=SEEDS, population=100, generations=50, backend="nump
                     "input_sha256": files, "people_sha256": sha256(people_path.read_bytes()).hexdigest()},
         "winning_plan_ul_status_counts": dict(Counter(r["final_ul_status"] for r in runs)),
         "ul_fields": list(UL),
+        "side_dish_ingredient_caps_pct": {
+            food.id: food.max_percent for food in foods if food.max_percent < 100
+        },
     })
     make_figures(output, histories, runs, seeds)
     return summary
