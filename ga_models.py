@@ -32,13 +32,6 @@ UL = {"preformed_a_ug": 3000, "vitamin_c_mg": 2000, "vitamin_d_ug": 100,
       "calcium_mg": 2500, "iron_mg": 45}
 ALL_FIELDS = tuple(dict.fromkeys(("energy_kcal",) + NUTRIENTS + tuple(UL)))
 EPS = 1e-7
-OLIVE_OIL_ID = "422"  # CNF food code, independent of the localized name.
-OLIVE_OIL_MAX_UNITS = 5  # Five of the ten dish weight units.
-
-
-def dish_unit_limit(food_id: str) -> int:
-    """Return the maximum number of tenths a side-dish ingredient may occupy."""
-    return OLIVE_OIL_MAX_UNITS if food_id == OLIVE_OIL_ID else 10
 
 
 @dataclass(frozen=True)
@@ -53,6 +46,8 @@ class Food:
         per100g: 营养字段到每100g含量的映射，能量单位为kcal，其余单位
             由字段后缀确定。允许缺失的UL字段以None表示未知，不能当成0。
         mix_group: 混合兼容组，默认savory；不同兼容组的食材不混合。
+        max_percent: 在非主食组合中的重量比例上限，默认100，按10个百分点
+            设置。低于100时必须为mixed角色，不能单独供应。
 
     Notes:
         食材角色、营养完整性及兼容组校验由加载器和MealGA负责。
@@ -65,6 +60,14 @@ class Food:
     role: str  # staple, fruit, mixed, standalone
     per100g: dict[str, float | None]
     mix_group: str = "savory"
+    max_percent: int = 100
+
+    def __post_init__(self):
+        """检查比例上限是否为10–100之间的10倍整数及角色是否可混合。"""
+        if type(self.max_percent) is not int or not 10 <= self.max_percent <= 100 or self.max_percent % 10:
+            raise ValueError("max_percent must be an integer multiple of 10 in [10, 100]")
+        if self.max_percent < 100 and self.role != "mixed":
+            raise ValueError("Only mixed side ingredients can have max_percent below 100")
 
 
 @dataclass(frozen=True)
@@ -195,7 +198,7 @@ class Dish:
     Attributes:
         food_ids: 1–4个互不重复的食材编号，单独供应项只能有一个编号。
         units: 与编号一一对应的整数比例单位，每单位为10%，每项至少1，
-            总和为10；单食材时为[10]，橄榄油最多5单位且不能单独供应。
+            总和为10；单食材时为[10]。
         weight_g: 此组合的全家可食总重量，单位g，不是每位成员的重量。
 
     Notes:

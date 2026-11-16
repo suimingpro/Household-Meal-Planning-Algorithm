@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from ga_models import EPS, OLIVE_OIL_ID, Dish, Fruit, Individual, dish_unit_limit
+from ga_models import EPS, Dish, Fruit, Individual
 
 if TYPE_CHECKING:
     from meal_ga import MealGA
@@ -61,11 +61,11 @@ def replacement_pool(ga: MealGA, module: Dish | Fruit, slot: int,
         # Role is preserved even for a one-ingredient dish (milk stays standalone).
         if food.role != old.role:
             continue
+        if module.units[slot] * 10 > food.max_percent:
+            continue
         ids = module.food_ids.copy()
         ids[slot] = fid
-        if isinstance(module, Fruit) or (
-            module.units[slot] <= dish_unit_limit(fid) and ga.compatible(ids)
-        ):
+        if isinstance(module, Fruit) or ga.compatible(ids):
             candidates.append(fid)
     return candidates
 
@@ -102,24 +102,23 @@ def mutate_kind(ga: MealGA, individual: Individual) -> str:
             module, slot, pool = ga.rng.choice(options)
             module.food_ids[slot] = ga.rng.choice(pool)
     elif event == "delete":
+        options = []
         for module in all_modules:
             if len(module.food_ids) < 2:
                 continue
-            slots = list(range(len(module.food_ids)))
-            if len(slots) == 2 and isinstance(module, Dish) and OLIVE_OIL_ID in module.food_ids:
-                # Deleting the other ingredient would leave a 100% olive-oil dish.
-                slots = [module.food_ids.index(OLIVE_OIL_ID)]
-            options.append((module, slots))
+            slots = [i for i in range(len(module.food_ids))
+                     if sum(ga.foods[fid].max_percent for j, fid in enumerate(module.food_ids) if j != i) >= 100]
+            if slots:
+                options.append((module, slots))
         if options:
             module, slots = ga.rng.choice(options)
             slot = ga.rng.choice(slots)
             module.food_ids.pop(slot)
             removed = module.units.pop(slot)
-            limits = [dish_unit_limit(fid) if isinstance(module, Dish) else 10
-                      for fid in module.food_ids]
             for _ in range(removed):
-                eligible = [i for i, u in enumerate(module.units) if u < limits[i]]
-                module.units[ga.rng.choice(eligible)] += 1
+                recipients = [i for i, fid in enumerate(module.food_ids)
+                              if module.units[i] * 10 < ga.foods[fid].max_percent]
+                module.units[ga.rng.choice(recipients)] += 1
     elif event == "add":
         for module in all_modules:
             fruit = isinstance(module, Fruit)
@@ -161,8 +160,7 @@ def mutate_portions(ga: MealGA, individual: Individual) -> str:
             for donor, units in enumerate(dish.units):
                 if units >= 2:
                     for receiver in range(len(dish.units)):
-                        if (receiver != donor and
-                                dish.units[receiver] < dish_unit_limit(dish.food_ids[receiver])):
+                        if receiver != donor and dish.units[receiver] * 10 < ga.foods[dish.food_ids[receiver]].max_percent:
                             operations["side_ratio"].append((dish, donor, receiver))
         fruit = meal.fruit
         if len(fruit.food_ids) == 2:

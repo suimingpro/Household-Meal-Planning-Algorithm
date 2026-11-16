@@ -7,6 +7,7 @@
     "candidate_file": "dataset/candidates.json",
     "food_records": {
       "4523": {
+        "max_percent": 100,
         "description_en": "Grains, rice, white, long-grain, regular, cooked",
         "food_source_code": "3",
         "food_source": "Food based on data from USDA: some nutrients analyzed in the Canadian product",
@@ -87,6 +88,7 @@
         }
       },
       "4066": {
+        "max_percent": 100,
         "description_en": "Bread, white, commercial",
         "food_source_code": "37",
         "food_source": "CNF Sampling and Analysis Program (SNAP-CAN)",
@@ -167,6 +169,7 @@
         }
       },
       "4458": {
+        "max_percent": 100,
         "description_en": "Pasta, egg noodles, enriched, cooked",
         "food_source_code": "1",
         "food_source": "Food based on data from USDA: some nutrients changed to meet Canadian regulations",
@@ -247,6 +250,7 @@
         }
       },
       "1696": {
+        "max_percent": 100,
         "description_en": "Apple, raw, with skin",
         "food_source_code": "3",
         "food_source": "Food based on data from USDA: some nutrients analyzed in the Canadian product",
@@ -327,6 +331,7 @@
         }
       },
       "1616": {
+        "max_percent": 100,
         "description_en": "Orange, california, navel, raw",
         "food_source_code": "0",
         "food_source": "Food based on data from USDA: No changes",
@@ -407,6 +412,7 @@
         }
       },
       "1704": {
+        "max_percent": 100,
         "description_en": "Banana, raw",
         "food_source_code": "3",
         "food_source": "Food based on data from USDA: some nutrients analyzed in the Canadian product",
@@ -487,6 +493,7 @@
         }
       },
       "1585": {
+        "max_percent": 100,
         "description_en": "Kiwi fruit, raw",
         "food_source_code": "0",
         "food_source": "Food based on data from USDA: No changes",
@@ -567,6 +574,7 @@
         }
       },
       "1749": {
+        "max_percent": 100,
         "description_en": "Strawberry, raw",
         "food_source_code": "3",
         "food_source": "Food based on data from USDA: some nutrients analyzed in the Canadian product",
@@ -647,6 +655,7 @@
         }
       },
       "2375": {
+        "max_percent": 100,
         "description_en": "Broccoli, boiled, drained",
         "food_source_code": "3",
         "food_source": "Food based on data from USDA: some nutrients analyzed in the Canadian product",
@@ -727,6 +736,7 @@
         }
       },
       "2214": {
+        "max_percent": 100,
         "description_en": "Spinach, boiled, drained",
         "food_source_code": "0",
         "food_source": "Food based on data from USDA: No changes",
@@ -807,6 +817,7 @@
         }
       },
       "2381": {
+        "max_percent": 100,
         "description_en": "Carrot, boiled, drained",
         "food_source_code": "3",
         "food_source": "Food based on data from USDA: some nutrients analyzed in the Canadian product",
@@ -887,6 +898,7 @@
         }
       },
       "2460": {
+        "max_percent": 100,
         "description_en": "Tomato, red, ripe, raw, year round average",
         "food_source_code": "3",
         "food_source": "Food based on data from USDA: some nutrients analyzed in the Canadian product",
@@ -967,6 +979,7 @@
         }
       },
       "2363": {
+        "max_percent": 100,
         "description_en": "Cucumber, raw",
         "food_source_code": "3",
         "food_source": "Food based on data from USDA: some nutrients analyzed in the Canadian product",
@@ -1047,6 +1060,7 @@
         }
       },
       "2362": {
+        "max_percent": 100,
         "description_en": "Cabbage, boiled, drained",
         "food_source_code": "3",
         "food_source": "Food based on data from USDA: some nutrients analyzed in the Canadian product",
@@ -1127,6 +1141,7 @@
         }
       },
       "2484": {
+        "max_percent": 100,
         "description_en": "Pepper, sweet, red, raw",
         "food_source_code": "3",
         "food_source": "Food based on data from USDA: some nutrients analyzed in the Canadian product",
@@ -1207,6 +1222,7 @@
         }
       },
       "5958": {
+        "max_percent": 100,
         "description_en": "Mushroom, white, stir-fried, no fat added",
         "food_source_code": "0",
         "food_source": "Food based on data from USDA: No changes",
@@ -1287,6 +1303,7 @@
         }
       },
       "2422": {
+        "max_percent": 100,
         "description_en": "Potato, boiled without skin, flesh",
         "food_source_code": "3",
         "food_source": "Food based on data from USDA: some nutrients analyzed in the Canadian product",
@@ -1367,6 +1384,7 @@
         }
       },
       "2242": {
+        "max_percent": 100,
         "description_en": "Sweet potato, boiled without skin",
         "food_source_code": "0",
         "food_source": "Food based on data from USDA: No changes",
@@ -1447,6 +1465,7 @@
         }
       },
       "2068": {
+        "max_percent": 100,
         "description_en": "Corn, sweet, yellow, on or off the cob, boiled, drained",
         "food_source_code": "0",
         "food_source": "Food based on data from USDA: No changes",
@@ -1527,6 +1546,7 @@
         }
       },
       "842": {
+        "max_percent": 100,
         "description_en": "Chicken, broiler, breast, meat, roasted",
         "food_source_code": "0",
         "food_source": "Food based on data from USDA: No changes",
@@ -1607,6 +1627,7 @@
         }
       },
       "2687": {
+        "max_percent": 100,
         "description_en": "Beef, ground, lean, broiled",
         "food_source_code": "0",
         "food_source": "Food based on data from USDA: No changes",
@@ -1687,6 +1708,7 @@
         }
       },
       "1780": {
+        "max_percent": 100,
         "description_en": "Pork, loin, whole, lean, roasted",
         "food_source_code": "0",
         "food_source": "Food based on data from USDA: No changes",
@@ -1767,6 +1789,7 @@
         }
       },
       "3053": {
+        "max_percent": 100,
         "description_en": "Fish, salmon, sockeye (red), baked or broiled",
         "food_source_code": "0",
         "food_source": "Food based on data from USDA: No changes",
@@ -1847,6 +1870,7 @@
         }
       },
       "3212": {
+        "max_percent": 100,
         "description_en": "Crustaceans, shrimp, mixed species, boiled or steamed",
         "food_source_code": "3",
         "food_source": "Food based on data from USDA: some nutrients analyzed in the Canadian product",
@@ -1927,6 +1951,7 @@
         }
       },
       "3404": {
+        "max_percent": 100,
         "description_en": "Tofu, regular, firm or extra firm (prepared with magnesium chloride and calcium sulphate or calcium chloride)",
         "food_source_code": "3",
         "food_source": "Food based on data from USDA: some nutrients analyzed in the Canadian product",
@@ -2007,6 +2032,7 @@
         }
       },
       "130": {
+        "max_percent": 100,
         "description_en": "Egg, chicken, whole, cooked, boiled in shell, hard-cooked",
         "food_source_code": "35",
         "food_source": "CNF recipe compilation",
@@ -2087,6 +2113,7 @@
         }
       },
       "2410": {
+        "max_percent": 100,
         "description_en": "Peas, green, boiled, drained",
         "food_source_code": "3",
         "food_source": "Food based on data from USDA: some nutrients analyzed in the Canadian product",
@@ -2167,6 +2194,7 @@
         }
       },
       "422": {
+        "max_percent": 50,
         "description_en": "Vegetable oil, olive",
         "food_source_code": "0",
         "food_source": "Food based on data from USDA: No changes",
@@ -2247,6 +2275,7 @@
         }
       },
       "61": {
+        "max_percent": 100,
         "description_en": "Milk, fluid, partly skimmed, 2% M.F.",
         "food_source_code": "37",
         "food_source": "CNF Sampling and Analysis Program (SNAP-CAN)",
@@ -2327,6 +2356,7 @@
         }
       },
       "6961": {
+        "max_percent": 100,
         "description_en": "Yogourt (yogurt), 2-3.9% M.F., plain",
         "food_source_code": "37",
         "food_source": "CNF Sampling and Analysis Program (SNAP-CAN)",
@@ -2500,7 +2530,7 @@
       "dataset/cnf_food_group.csv": "468e10d666551f90c37ab8e8e149dbbc7a76fc0215f74530b8d43fd1eacfe4bb",
       "dataset/nutrient_name.csv": "708a942fc8a6a4913b106cd964f4f3b116845ec72942a936477241be8889f785",
       "dataset/nutrient_amount.csv": "c53803c72faadbdec9750ccaa1fc9a9cfd8732e0c784d2a66c62cd27d09b22d2",
-      "dataset/candidates.json": "e954c4280a3031e9840e6b28c837dd9adc05137e295edbf76e8d15db3eec8322"
+      "dataset/candidates.json": "8c6bddd94ac53ae67e58a226aa58beb4c9469386403a343ed925659e40333e6a"
     }
   },
   "config": {

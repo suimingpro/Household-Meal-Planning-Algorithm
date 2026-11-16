@@ -1,5 +1,6 @@
 """Regression checks for the portable evaluator and experimental protocol."""
 
+import csv
 import json
 import math
 import tempfile
@@ -60,8 +61,6 @@ class ExperimentTests(unittest.TestCase):
         self.assertAlmostEqual(winner.fitness, history[-1]["incumbent_fitness"])
 
     def test_quick_suite_exports_paired_inputs_and_all_conditions(self):
-        import csv
-
         from experiments.run_experiments import run_suite
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -82,6 +81,8 @@ class ExperimentTests(unittest.TestCase):
             )
             self.assertEqual(rows["no_salmon_ea"]["candidate_count"], "29")
             self.assertEqual(rows["no_salmon_ea"]["salmon_g_total"], "0.0")
+            manifest = json.loads((output / "run_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest.get("side_dish_ingredient_caps_pct"), {"422": 50})
             example = json.loads((output / "example_plan_seed42.json").read_text(encoding="utf-8"))
             oil_percent = [
                 ingredient["percent"]
@@ -89,10 +90,23 @@ class ExperimentTests(unittest.TestCase):
                 for ingredient in dish["ingredients"] if ingredient["id"] == "422"
             ]
             self.assertEqual(
-                rows["default_ea"].get("max_olive_oil_dish_pct"),
-                str(max(oil_percent, default=0)),
+                rows["default_ea"]["max_olive_oil_dish_pct"], str(max(oil_percent, default=0))
             )
             self.assertTrue(all(0 <= int(row["max_olive_oil_dish_pct"]) <= 50 for row in rows.values()))
             for filename in ("history.csv", "summary.csv", "nutrients.csv", "run_manifest.json",
                              "example_plan_seed42.json", "convergence.png", "final_comparison.png"):
                 self.assertGreater((output / filename).stat().st_size, 0)
+
+
+    def test_checked_in_seed42_examples_respect_olive_oil_cap(self):
+        for rel_path in ("experiments/results/example_plan_seed42.json", "results.json"):
+            with self.subTest(path=rel_path):
+                payload = json.loads((ROOT / rel_path).read_text(encoding="utf-8"))
+                plans = [payload["plan"]] if "plan" in payload else payload["plans"]
+                for plan in plans:
+                    for meal in plan["meals"]:
+                        for dish in meal["dishes"]:
+                            self.assertEqual(sum(i["percent"] for i in dish["ingredients"]), 100)
+                            for ingredient in dish["ingredients"]:
+                                if ingredient["id"] == "422":
+                                    self.assertLessEqual(ingredient["percent"], 50)

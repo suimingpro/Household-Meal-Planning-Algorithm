@@ -195,6 +195,7 @@
       "name": "橄榄油",
       "category": "other",
       "role": "mixed",
+      "max_percent": 50,
       "description_en": "Vegetable oil, olive"
     },
     {
