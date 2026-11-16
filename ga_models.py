@@ -46,6 +46,8 @@ class Food:
         per100g: 营养字段到每100g含量的映射，能量单位为kcal，其余单位
             由字段后缀确定。允许缺失的UL字段以None表示未知，不能当成0。
         mix_group: 混合兼容组，默认savory；不同兼容组的食材不混合。
+        max_percent: 在非主食组合中的重量比例上限，默认100，按10个百分点
+            设置。低于100时必须为mixed角色，不能单独供应。
 
     Notes:
         食材角色、营养完整性及兼容组校验由加载器和MealGA负责。
@@ -58,6 +60,14 @@ class Food:
     role: str  # staple, fruit, mixed, standalone
     per100g: dict[str, float | None]
     mix_group: str = "savory"
+    max_percent: int = 100
+
+    def __post_init__(self):
+        """检查比例上限是否为10–100之间的10倍整数及角色是否可混合。"""
+        if type(self.max_percent) is not int or not 10 <= self.max_percent <= 100 or self.max_percent % 10:
+            raise ValueError("max_percent must be an integer multiple of 10 in [10, 100]")
+        if self.max_percent < 100 and self.role != "mixed":
+            raise ValueError("Only mixed side ingredients can have max_percent below 100")
 
 
 @dataclass(frozen=True)

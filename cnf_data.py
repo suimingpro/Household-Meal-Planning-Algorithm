@@ -167,7 +167,8 @@ def load_cnf_data(
         candidates_path: 候选清单JSON路径；省略时读取directory下的
             candidates.json。清单的foods列表需包含25–40个唯一food_code，
             各条目提供name、category、role，以及可选的description_en、
-            mix_group。description_en存在且非空时须与原始食材描述一致。
+            mix_group、max_percent。max_percent表示非主食重量比例上限，
+            默认100。description_en存在且非空时须与原始食材描述一致。
 
     Returns:
         (foods, metadata)二元组：foods按候选清单顺序保存食材字典，包含
@@ -296,6 +297,7 @@ def load_cnf_data(
                 "category": candidate["category"],
                 "role": candidate["role"],
                 "mix_group": candidate.get("mix_group", "savory"),
+                "max_percent": candidate.get("max_percent", 100),
                 "per100g": values,
             }
         )
@@ -304,6 +306,7 @@ def load_cnf_data(
         if source_code not in sources or group_code not in groups:
             raise ValueError(f"CNF {code}: missing food source/group record")
         provenance[code] = {
+            "max_percent": candidate.get("max_percent", 100),
             "description_en": row["Food_Description_EN"],
             "food_source_code": source_code,
             "food_source": sources[source_code]["Food_Source_Description_EN"],

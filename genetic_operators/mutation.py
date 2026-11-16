@@ -61,6 +61,8 @@ def replacement_pool(ga: MealGA, module: Dish | Fruit, slot: int,
         # Role is preserved even for a one-ingredient dish (milk stays standalone).
         if food.role != old.role:
             continue
+        if module.units[slot] * 10 > food.max_percent:
+            continue
         ids = module.food_ids.copy()
         ids[slot] = fid
         if isinstance(module, Fruit) or ga.compatible(ids):
@@ -100,14 +102,23 @@ def mutate_kind(ga: MealGA, individual: Individual) -> str:
             module, slot, pool = ga.rng.choice(options)
             module.food_ids[slot] = ga.rng.choice(pool)
     elif event == "delete":
-        options = [m for m in all_modules if len(m.food_ids) >= 2]
+        options = []
+        for module in all_modules:
+            if len(module.food_ids) < 2:
+                continue
+            slots = [i for i in range(len(module.food_ids))
+                     if sum(ga.foods[fid].max_percent for j, fid in enumerate(module.food_ids) if j != i) >= 100]
+            if slots:
+                options.append((module, slots))
         if options:
-            module = ga.rng.choice(options)
-            slot = ga.rng.randrange(len(module.food_ids))
+            module, slots = ga.rng.choice(options)
+            slot = ga.rng.choice(slots)
             module.food_ids.pop(slot)
             removed = module.units.pop(slot)
             for _ in range(removed):
-                module.units[ga.rng.randrange(len(module.units))] += 1
+                recipients = [i for i, fid in enumerate(module.food_ids)
+                              if module.units[i] * 10 < ga.foods[fid].max_percent]
+                module.units[ga.rng.choice(recipients)] += 1
     elif event == "add":
         for module in all_modules:
             fruit = isinstance(module, Fruit)
@@ -149,7 +160,7 @@ def mutate_portions(ga: MealGA, individual: Individual) -> str:
             for donor, units in enumerate(dish.units):
                 if units >= 2:
                     for receiver in range(len(dish.units)):
-                        if receiver != donor:
+                        if receiver != donor and dish.units[receiver] * 10 < ga.foods[dish.food_ids[receiver]].max_percent:
                             operations["side_ratio"].append((dish, donor, receiver))
         fruit = meal.fruit
         if len(fruit.food_ids) == 2:
