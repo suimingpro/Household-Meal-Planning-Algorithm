@@ -26,6 +26,7 @@ from ga_models import (
     EPS,
     MEALS,
     NUTRIENTS,
+    OLIVE_OIL_ID,
     UL,
     WEIGHTS,
     Config,
@@ -36,6 +37,7 @@ from ga_models import (
     Individual,
     Meal,
     Person,
+    dish_unit_limit,
 )
 from genetic_operators import evolution
 
@@ -175,7 +177,10 @@ class MealGA:
                     raise ValueError(f"Invalid nutrient {k}: {f.id}")
         self.staples = [f.id for f in foods if f.role == "staple"]
         self.fruits = [f.id for f in foods if f.role == "fruit"]
-        self.sides = [f.id for f in foods if f.role in {"mixed", "standalone"}]
+        self.sides = [
+            f.id for f in foods
+            if f.role == "mixed" or (f.role == "standalone" and f.id != OLIVE_OIL_ID)
+        ]
         if len(self.staples) != 3 or len(self.fruits) < 2 or not self.sides:
             raise ValueError(
                 "Exactly 3 staples, at least 2 fruits, and side foods required"
@@ -289,8 +294,10 @@ class MealGA:
 
         Returns:
             单独供应项或可混合食材独立出现时为True；多种食材必须均为
-            mixed角色且属于同一个mix_group。水果和主食不作为非主食混合。
+            mixed角色且属于同一个mix_group。橄榄油不能单独成菜。
         """
+        if ids == [OLIVE_OIL_ID]:
+            return False
         fs = [self.foods[f] for f in ids]
         return (len(fs) == 1 and fs[0].role in {"mixed", "standalone"}) or (
             all(f.role == "mixed" for f in fs) and len({f.mix_group for f in fs}) == 1
@@ -305,7 +312,7 @@ class MealGA:
         Returns:
             包含食材编号、比例单位和全家总重量的Dish。混合食材数由
             截断正态分布N(2.5, 1)取整得到1–4种；单独供应项固定一种。
-            比例以10%为单位且总和100%，重量在0.8B–1.2B内均匀抽取。
+            比例以10%为单位且总和100%，橄榄油最高50%。重量在0.8B–1.2B内均匀抽取。
         """
         first = self.rng.choice(self.sides)
         food = self.foods[first]
@@ -321,11 +328,17 @@ class MealGA:
                 for f in self.sides
                 if self.foods[f].role == "mixed"
                 and self.foods[f].mix_group == food.mix_group
+                and (n > 1 or f != OLIVE_OIL_ID)
             ]
             ids = self.rng.sample(pool, n)
         units = [1] * len(ids)
+        eligible = list(range(len(ids)))
+        limits = [dish_unit_limit(fid) for fid in ids]
         for _ in range(10 - len(ids)):
-            units[self.rng.randrange(len(ids))] += 1
+            i = self.rng.choice(eligible)
+            units[i] += 1
+            if units[i] == limits[i]:
+                eligible.remove(i)
         return Dish(ids, units, self.baseline(meal) * self.rng.uniform(0.8, 1.2))
 
     def initialize(self) -> Individual:
@@ -390,8 +403,11 @@ class MealGA:
                 if fruit:
                     if any(f not in self.fruits for f in module.food_ids):
                         raise ValueError("Non-fruit in fruit module")
-                elif not self.compatible(module.food_ids):
-                    raise ValueError("Incompatible side ingredients")
+                else:
+                    if any(u > dish_unit_limit(fid) for fid, u in zip(module.food_ids, module.units)):
+                        raise ValueError("Olive oil cannot exceed 50% of a side dish by weight")
+                    if not self.compatible(module.food_ids):
+                        raise ValueError("Incompatible side ingredients")
             for dish in meal.dishes:
                 b = self.baseline(m)
                 if (

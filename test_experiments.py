@@ -82,6 +82,17 @@ class ExperimentTests(unittest.TestCase):
             )
             self.assertEqual(rows["no_salmon_ea"]["candidate_count"], "29")
             self.assertEqual(rows["no_salmon_ea"]["salmon_g_total"], "0.0")
+            example = json.loads((output / "example_plan_seed42.json").read_text(encoding="utf-8"))
+            oil_percent = [
+                ingredient["percent"]
+                for meal in example["plan"]["meals"] for dish in meal["dishes"]
+                for ingredient in dish["ingredients"] if ingredient["id"] == "422"
+            ]
+            self.assertEqual(
+                rows["default_ea"].get("max_olive_oil_dish_pct"),
+                str(max(oil_percent, default=0)),
+            )
+            self.assertTrue(all(0 <= int(row["max_olive_oil_dish_pct"]) <= 50 for row in rows.values()))
             for filename in ("history.csv", "summary.csv", "nutrients.csv", "run_manifest.json",
                              "example_plan_seed42.json", "convergence.png", "final_comparison.png"):
                 self.assertGreater((output / filename).stat().st_size, 0)

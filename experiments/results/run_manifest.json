@@ -1,6 +1,6 @@
 {
   "python_version": "3.12.14",
-  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "platform": "Linux-6.18.60-x86_64-with-glibc2.41",
   "backend": {
     "framework": "numpy",
     "version": "2.3.5",
@@ -407,5 +407,8 @@
     "synthetic_folic_acid_ug",
     "calcium_mg",
     "iron_mg"
-  ]
+  ],
+  "side_dish_ingredient_caps_pct": {
+    "422": 50
+  }
 }

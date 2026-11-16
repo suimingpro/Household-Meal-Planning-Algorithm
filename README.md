@@ -2,7 +2,7 @@
 
 **CISC455/851 group project** · Python prototype and reproducible evaluation
 
-The project builds a one-day breakfast, lunch and dinner plan for three sample adults using 30 foods from the Canadian Nutrient File (CNF). It searches over ingredients, portions and combinations to improve a capped nutrient-adequacy score subject to meal-structure constraints. The repository name in the original ZIP referred to doctor matching, but the supplied prototype implements meal planning.
+The project builds a one-day breakfast, lunch and dinner plan for three sample adults using 30 foods from the Canadian Nutrient File (CNF). It searches over ingredients, portions and combinations to improve a capped nutrient-adequacy score subject to meal-structure constraints. Olive oil (CNF food code 422) can account for at most 50% of the weight of any side dish and cannot be served on its own. The repository name in the original ZIP referred to doctor matching, but the supplied prototype implements meal planning.
 
 **Start with [the Sections 4–5 report](docs/Sections_4_and_5.pdf)** ([editable Markdown](docs/Sections_4_and_5.md)). It presents the experimental design, convergence and outcome figures, and a reflection on what the results do and do not establish.
 
@@ -25,7 +25,7 @@ python -m experiments.run_experiments --quick
 python -m experiments.run_experiments --output reproduced_results
 ```
 
-The quick run only checks that the pipeline works. The full command repeats the six conditions across ten fixed seeds, with 100 individuals and 50 evolutionary updates (51 scored batches, including initialization). The checked-in results are under [experiments/results/](experiments/results/). Use `--output` to keep the checked-in study intact. Timing is machine-dependent. Very small floating-point differences across backends may change the ordering of tied plans.
+The quick run only checks that the pipeline works. The full command repeats the six conditions across ten fixed seeds, with 100 individuals and 50 evolutionary updates (51 scored batches, including initialization). [experiments/results/](experiments/results/) is the only result folder used in the report. The command above writes a separate local copy for comparison. To refresh the report's result files, run `python -m experiments.run_experiments` without `--output`. Do not submit `reproduced_results/`, which is reserved for local runs. In `runs.csv`, `max_olive_oil_dish_pct` records the largest per-dish olive-oil percentage in each winning plan (0 if none was used). Timing is machine-dependent. Very small floating-point differences across backends may change the ordering of tied plans.
 
 | File or directory | Contents |
 | --- | --- |
@@ -34,7 +34,6 @@ The quick run only checks that the pipeline works. The full command repeats the 
 | `experiments/run_experiments.py` | Fixed-budget random baseline, two operator ablations and a candidate-pool stress test |
 | `experiments/results/` | Per-run and per-batch data, nutrient outcomes, paired comparisons, figures, input manifest and a detailed example plan |
 | `results.json` | Standalone prototype example generated on NumPy CPU with seed 42 |
-| `experiments/reference/` | Original PyTorch/CUDA example from the input archive, retained separately from the new results |
 | `test_all.py`, `test_experiments.py` | Prototype tests, scalar scoring checks and experimental protocol checks |
 | `docs/Prototype_Design_ZH.md` | Original prototype design notes, with current setup information |
 

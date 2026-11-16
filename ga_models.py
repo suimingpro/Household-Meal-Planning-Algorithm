@@ -32,6 +32,13 @@ UL = {"preformed_a_ug": 3000, "vitamin_c_mg": 2000, "vitamin_d_ug": 100,
       "calcium_mg": 2500, "iron_mg": 45}
 ALL_FIELDS = tuple(dict.fromkeys(("energy_kcal",) + NUTRIENTS + tuple(UL)))
 EPS = 1e-7
+OLIVE_OIL_ID = "422"  # CNF food code, independent of the localized name.
+OLIVE_OIL_MAX_UNITS = 5  # Five of the ten dish weight units.
+
+
+def dish_unit_limit(food_id: str) -> int:
+    """Return the maximum number of tenths a side-dish ingredient may occupy."""
+    return OLIVE_OIL_MAX_UNITS if food_id == OLIVE_OIL_ID else 10
 
 
 @dataclass(frozen=True)
@@ -188,7 +195,7 @@ class Dish:
     Attributes:
         food_ids: 1–4个互不重复的食材编号，单独供应项只能有一个编号。
         units: 与编号一一对应的整数比例单位，每单位为10%，每项至少1，
-            总和为10；单食材时为[10]。
+            总和为10；单食材时为[10]，橄榄油最多5单位且不能单独供应。
         weight_g: 此组合的全家可食总重量，单位g，不是每位成员的重量。
 
     Notes:

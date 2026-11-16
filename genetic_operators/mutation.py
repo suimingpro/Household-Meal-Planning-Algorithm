@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from ga_models import EPS, Dish, Fruit, Individual
+from ga_models import EPS, OLIVE_OIL_ID, Dish, Fruit, Individual, dish_unit_limit
 
 if TYPE_CHECKING:
     from meal_ga import MealGA
@@ -63,7 +63,9 @@ def replacement_pool(ga: MealGA, module: Dish | Fruit, slot: int,
             continue
         ids = module.food_ids.copy()
         ids[slot] = fid
-        if isinstance(module, Fruit) or ga.compatible(ids):
+        if isinstance(module, Fruit) or (
+            module.units[slot] <= dish_unit_limit(fid) and ga.compatible(ids)
+        ):
             candidates.append(fid)
     return candidates
 
@@ -100,14 +102,24 @@ def mutate_kind(ga: MealGA, individual: Individual) -> str:
             module, slot, pool = ga.rng.choice(options)
             module.food_ids[slot] = ga.rng.choice(pool)
     elif event == "delete":
-        options = [m for m in all_modules if len(m.food_ids) >= 2]
+        for module in all_modules:
+            if len(module.food_ids) < 2:
+                continue
+            slots = list(range(len(module.food_ids)))
+            if len(slots) == 2 and isinstance(module, Dish) and OLIVE_OIL_ID in module.food_ids:
+                # Deleting the other ingredient would leave a 100% olive-oil dish.
+                slots = [module.food_ids.index(OLIVE_OIL_ID)]
+            options.append((module, slots))
         if options:
-            module = ga.rng.choice(options)
-            slot = ga.rng.randrange(len(module.food_ids))
+            module, slots = ga.rng.choice(options)
+            slot = ga.rng.choice(slots)
             module.food_ids.pop(slot)
             removed = module.units.pop(slot)
+            limits = [dish_unit_limit(fid) if isinstance(module, Dish) else 10
+                      for fid in module.food_ids]
             for _ in range(removed):
-                module.units[ga.rng.randrange(len(module.units))] += 1
+                eligible = [i for i, u in enumerate(module.units) if u < limits[i]]
+                module.units[ga.rng.choice(eligible)] += 1
     elif event == "add":
         for module in all_modules:
             fruit = isinstance(module, Fruit)
@@ -149,7 +161,8 @@ def mutate_portions(ga: MealGA, individual: Individual) -> str:
             for donor, units in enumerate(dish.units):
                 if units >= 2:
                     for receiver in range(len(dish.units)):
-                        if receiver != donor:
+                        if (receiver != donor and
+                                dish.units[receiver] < dish_unit_limit(dish.food_ids[receiver])):
                             operations["side_ratio"].append((dish, donor, receiver))
         fruit = meal.fruit
         if len(fruit.food_ids) == 2:

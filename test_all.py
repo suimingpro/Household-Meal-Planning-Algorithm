@@ -384,6 +384,28 @@ class MealGATests(unittest.TestCase):
             self.assertEqual(meal.fruit.person_weights_g, [250 / 3] * 3)
         self.ga.validate(individual)
 
+    def test_olive_oil_dish_rejects_more_than_half_by_weight(self):
+        plan = self.ga.initialize()
+        dishes = plan.meals[0].dishes
+        grams = dishes[0].weight_g
+        dishes[0] = Dish(["422", "3404"], [5, 5], grams)
+        self.ga.validate(plan)
+        for ids, units in ((["422", "3404"], [7, 3]), (["422"], [10])):
+            with self.subTest(units=units):
+                dishes[0] = Dish(ids, units, grams)
+                with self.assertRaises(ValueError):
+                    self.ga.validate(plan)
+
+    def test_random_dishes_respect_olive_oil_cap(self):
+        oil_units = [
+            units
+            for dish in (self.ga.new_dish(0) for _ in range(300))
+            for fid, units in zip(dish.food_ids, dish.units)
+            if fid == "422"
+        ]
+        self.assertTrue(oil_units)
+        self.assertLessEqual(max(oil_units), 5)
+
     def test_different_household_sizes(self):
         for n in (1, 2, 5):
             people = [Person(str(i), 30, "male", 70, 2000) for i in range(n)]
@@ -512,6 +534,11 @@ class MealGATests(unittest.TestCase):
             kind_events.add(mutation.mutate_kind(self.ga, child))
             portion_events.add(mutation.mutate_portions(self.ga, child))
             self.ga.validate(child)
+            self.assertTrue(all(
+                units <= 5
+                for meal in child.meals for dish in meal.dishes
+                for fid, units in zip(dish.food_ids, dish.units) if fid == "422"
+            ))
             b = child
         self.assertEqual(a, before)
         self.assertEqual(
