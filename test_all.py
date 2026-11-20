@@ -11,7 +11,10 @@ from dataclasses import asdict
 from pathlib import Path
 from unittest.mock import Mock
 
-import torch
+try:
+    import torch
+except ImportError:
+    torch = None
 
 from cnf_data import csv_rows, load_cnf_data
 from device_utils import resolve_device
@@ -85,10 +88,7 @@ class CNFDataTests(unittest.TestCase):
     def write_table(self, name, rows, fieldnames=None):
         with (self.path / name).open("w", encoding="utf-8-sig", newline="") as f:
             writer = csv.DictWriter(
-                f,
-                fieldnames=fieldnames
-                if fieldnames is not None
-                else self.tables[name][0].keys(),
+                f, fieldnames=fieldnames if fieldnames is not None else self.tables[name][0].keys()
             )
             writer.writeheader()
             writer.writerows(rows)
@@ -129,6 +129,15 @@ class CNFDataTests(unittest.TestCase):
         for individual, ev in plans:
             ga.validate(individual)
             self.assertIsNone(ev.people[0]["totals"]["ul_applicable_e_mg"])
+
+    def test_candidate_proportion_caps_are_loaded(self):
+        self.assertEqual(next(f for f in self.foods if f.id == "422").max_percent, 50)
+        candidates = copy.deepcopy(self.candidates)
+        next(c for c in candidates["foods"] if c["food_code"] == "422")["max_percent"] = 30
+        (self.path / "candidates.json").write_text(json.dumps(candidates), encoding="utf-8")
+        foods, metadata = load_foods(self.path)
+        self.assertEqual(next(f for f in foods if f.id == "422").max_percent, 30)
+        self.assertEqual(metadata["food_records"]["422"]["max_percent"], 30)
 
     def test_missing_nutrient_file_is_explicit_error(self):
         (self.path / "nutrient_amount.csv").unlink()
@@ -181,9 +190,7 @@ class CNFDataTests(unittest.TestCase):
 
     def test_standard_tag_has_priority_over_english_name(self):
         rows = copy.deepcopy(self.tables["nutrient_name.csv"])
-        next(r for r in rows if r["Tagname"] == "PROCNT")["Nutrient_Name_EN"] = (
-            "Renamed protein"
-        )
+        next(r for r in rows if r["Tagname"] == "PROCNT")["Nutrient_Name_EN"] = "Renamed protein"
         self.write_table("nutrient_name.csv", rows)
         foods, _ = load_foods(self.path)
         self.assertEqual(foods, self.foods)
@@ -197,9 +204,7 @@ class CNFDataTests(unittest.TestCase):
                         row.pop("Tagname")
                     else:
                         row["Tagname"] = ""
-                    row["Nutrient_Name_EN"] = (
-                        "  " + row["Nutrient_Name_EN"].upper() + "  "
-                    )
+                    row["Nutrient_Name_EN"] = "  " + row["Nutrient_Name_EN"].upper() + "  "
                 self.write_table("nutrient_name.csv", rows, fieldnames=rows[0].keys())
                 foods, _ = load_foods(self.path)
                 self.assertEqual(foods, self.foods)
@@ -376,6 +381,63 @@ class MealGATests(unittest.TestCase):
                 self.assertAlmostEqual(
                     grams / 100 * self.ga.foods[fid].per100g["carbohydrate_g"], carbs
                 )
+
+    def test_initialization_respects_olive_oil_cap(self):
+        oil_seen = False
+        for _ in range(100):
+            individual = self.ga.initialize()
+            self.ga.validate(individual)
+            for meal in individual.meals:
+                for dish in meal.dishes:
+                    if "422" in dish.food_ids:
+                        oil_seen = True
+                        self.assertLessEqual(dish.units[dish.food_ids.index("422")], 5)
+                        self.assertGreaterEqual(len(dish.food_ids), 2)
+        self.assertTrue(oil_seen)
+
+    def test_olive_oil_fifty_percent_boundary(self):
+        individual = self.ga.initialize()
+        dish = individual.meals[0].dishes[0]
+        dish.food_ids, dish.units = ["422", "130"], [5, 5]
+        self.ga.validate(individual)
+        for ids, units in ((["422", "130"], [6, 4]), (["422"], [10])):
+            dish.food_ids, dish.units = ids, units
+            with self.assertRaisesRegex(ValueError, "max_percent"):
+                self.ga.validate(individual)
+
+    def test_replacement_cannot_introduce_oil_over_cap(self):
+        dish = Dish(["130", "2460"], [6, 4], self.ga.baseline(0))
+        self.assertNotIn("422", mutation.replacement_pool(self.ga, dish, 0))
+        self.assertIn("422", mutation.replacement_pool(self.ga, dish, 1))
+        single = Dish(["130"], [10], self.ga.baseline(0))
+        self.assertNotIn("422", mutation.replacement_pool(self.ga, single, 0))
+
+    def test_deletion_cannot_leave_oil_as_only_ingredient(self):
+        individual = self.ga.initialize()
+        for meal in individual.meals:
+            meal.fruit.food_ids, meal.fruit.units = ["1696"], [10]
+            for dish in meal.dishes:
+                dish.food_ids, dish.units = ["422", "130"], [5, 5]
+        dish_count = sum(len(m.dishes) for m in individual.meals)
+        with unittest.mock.patch.object(self.ga.rng, "random", return_value=.32):
+            for _ in range(dish_count):
+                self.assertEqual(mutation.mutate_kind(self.ga, individual), "delete")
+                self.ga.validate(individual)
+        self.assertTrue(all(d.food_ids == ["130"] for m in individual.meals for d in m.dishes))
+
+    def test_portion_mutations_and_crossover_preserve_oil_cap(self):
+        ga = MealGA(self.foods, self.people, Config(portion_mutation_probability=1), seed=42)
+        a, b = ga.initialize(), ga.initialize()
+        for individual in (a, b):
+            for meal in individual.meals:
+                for dish in meal.dishes:
+                    dish.food_ids, dish.units = ["422", "130"], [5, 5]
+        for _ in range(200):
+            child = crossover_operator.crossover(ga, a, b)
+            mutation.mutate_portions(ga, child)
+            ga.validate(child)
+            self.assertTrue(all(d.units[0] <= 5 for m in child.meals for d in m.dishes))
+            b = child
 
     def test_initialization_budget_no_double_counting(self):
         individual = self.ga.initialize()
@@ -724,9 +786,13 @@ class TorchFitnessTests(unittest.TestCase):
         population = [self.ga.initialize() for _ in range(4)]
         grams = self.ga.population_weights(population)
         self.assertEqual(grams.shape, (4, 2, 30))
-        self.assertEqual(grams.dtype, torch.float64)
-        self.assertEqual(grams.device.type, "cpu")
-        self.assertFalse(grams.requires_grad)
+        if self.ga.backend == "torch":
+            self.assertEqual(grams.dtype, torch.float64)
+            self.assertEqual(grams.device.type, "cpu")
+            self.assertFalse(grams.requires_grad)
+        else:
+            self.assertEqual(str(grams.dtype), "float64")
+            self.assertEqual(self.ga.backend_info()["device"], "cpu")
         for b, individual in enumerate(population):
             for p in range(2):
                 expected = sum(g for _, _, _, g in self.ga.portions(individual, p))
@@ -790,6 +856,7 @@ class TorchFitnessTests(unittest.TestCase):
             asdict(new), asdict(scalar_reference(self.ga, individual))
         )
 
+    @unittest.skipIf(torch is None, "Optional PyTorch backend is not installed")
     def test_auto_device_and_unsupported_device(self):
         auto = resolve_device("auto")
         self.assertEqual(auto.type, "cuda" if torch.cuda.is_available() else "cpu")
@@ -800,7 +867,7 @@ class TorchFitnessTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "CUDA is not available"):
                 resolve_device("cuda")
 
-    @unittest.skipUnless(torch.cuda.is_available(), "CUDA is not available")
+    @unittest.skipUnless(torch is not None and torch.cuda.is_available(), "CUDA is not available")
     def test_cuda_matches_cpu(self):
         gpu = MealGA(self.foods, self.people, Config(device="cuda"), seed=29)
         population = [self.ga.initialize() for _ in range(8)]

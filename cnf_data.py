@@ -130,23 +130,18 @@ def resolve_nutrient_map(
     used_codes = {}
     for field, (tag, name, expected_unit) in NUTRIENT_SPECS.items():
         matches = [
-            code
-            for code, row in nutrient_names.items()
+            code for code, row in nutrient_names.items()
             if _normalize_label(row.get("Tagname")) == _normalize_label(tag)
         ]
         if not matches:
             matches = [
-                code
-                for code, row in nutrient_names.items()
-                if _normalize_label(row.get("Nutrient_Name_EN"))
-                == _normalize_label(name)
+                code for code, row in nutrient_names.items()
+                if _normalize_label(row.get("Nutrient_Name_EN")) == _normalize_label(name)
             ]
         if not matches:
             raise ValueError(f"CNF nutrient not found: {field}, tag={tag}, name={name}")
         if len(matches) != 1:
-            raise ValueError(
-                f"Ambiguous CNF nutrient: {field}, matching codes={matches}"
-            )
+            raise ValueError(f"Ambiguous CNF nutrient: {field}, matching codes={matches}")
         code = matches[0]
         unit = nutrient_names[code].get("Nutrient_Unit", "").strip()
         if _normalize_label(unit) != _normalize_label(expected_unit):
@@ -155,9 +150,7 @@ def resolve_nutrient_map(
                 f"expected {expected_unit}, got {unit}"
             )
         if code in used_codes:
-            raise ValueError(
-                f"CNF nutrient code reused: {code}, {used_codes[code]} and {field}"
-            )
+            raise ValueError(f"CNF nutrient code reused: {code}, {used_codes[code]} and {field}")
         used_codes[code] = field
         resolved[field] = (code, unit)
     return resolved
@@ -174,7 +167,8 @@ def load_cnf_data(
         candidates_path: 候选清单JSON路径；省略时读取directory下的
             candidates.json。清单的foods列表需包含25–40个唯一food_code，
             各条目提供name、category、role，以及可选的description_en、
-            mix_group。description_en存在且非空时须与原始食材描述一致。
+            mix_group、max_percent。max_percent表示非主食重量比例上限，
+            默认100。description_en存在且非空时须与原始食材描述一致。
 
     Returns:
         (foods, metadata)二元组：foods按候选清单顺序保存食材字典，包含
@@ -303,6 +297,7 @@ def load_cnf_data(
                 "category": candidate["category"],
                 "role": candidate["role"],
                 "mix_group": candidate.get("mix_group", "savory"),
+                "max_percent": candidate.get("max_percent", 100),
                 "per100g": values,
             }
         )
@@ -311,6 +306,7 @@ def load_cnf_data(
         if source_code not in sources or group_code not in groups:
             raise ValueError(f"CNF {code}: missing food source/group record")
         provenance[code] = {
+            "max_percent": candidate.get("max_percent", 100),
             "description_en": row["Food_Description_EN"],
             "food_source_code": source_code,
             "food_source": sources[source_code]["Food_Source_Description_EN"],
@@ -327,12 +323,9 @@ def load_cnf_data(
         "candidate_file": str(candidates_path),
         "food_records": provenance,
         "nutrient_mapping": {
-            field: {
-                "code": code,
-                "unit": unit,
-                "tag": nutrient_names[code].get("Tagname"),
-                "name": nutrient_names[code].get("Nutrient_Name_EN"),
-            }
+            field: {"code": code, "unit": unit,
+                    "tag": nutrient_names[code].get("Tagname"),
+                    "name": nutrient_names[code].get("Nutrient_Name_EN")}
             for field, (code, unit) in nutrient_map.items()
         },
         "ul_note": "Vitamin E UL applicable forms/sources are not identifiable from these tables; not assessed.",

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-import torch
+try:
+    import torch
+except ImportError:
+    torch = None
 
 
 def resolve_device(name: str) -> torch.device:
@@ -17,6 +20,8 @@ def resolve_device(name: str) -> torch.device:
     Raises:
         ValueError: 设备名称无效、不受支持、CUDA不可用或GPU编号越界。
     """
+    if torch is None:
+        raise ValueError("PyTorch is not installed; use the NumPy CPU backend")
     if name == "auto":
         name = "cuda" if torch.cuda.is_available() else "cpu"
     try:

@@ -21,8 +21,9 @@ The default device is CPU. With a CUDA-enabled PyTorch installation and an avail
 By default, the program reads **CNF 2026 food and nutrient CSV data** from `dataset/`, selects 30 foods through `dataset/candidates.json`, and reads household members from `data/people.json`. It evolves a population of 100 individuals for 50 generations and writes `results.json`. Including generation 0, the output contains 51 sets of statistics and up to three distinct preferred plans collected across generations. Plans follow the UL comparison rules, so the preferred plan may differ from the plan with the highest base score alone.
 
 ```bash
-python3 meal_ga.py --foods dataset --people data/people.json \
-  --population 200 --generations 50 --seed 123 --output my_results.json
+python -m pip install -r requirements.txt
+python meal_ga.py --backend numpy --seed 42 --output my_plan.json
+python -m unittest -v
 ```
 
 The data source is [Health Canada's CNF 2026](https://open.canada.ca/data/en/dataset/1b6139bd-ed7e-4043-bc28-ff00e10f3109). The original local food name, source, and group tables are supplemented with the official `nutrient_name.csv` and `nutrient_amount.csv` tables. Records are joined by code, and nutrient values come from the dataset rather than demonstration estimates. See [dataset/README.md](dataset/README.md) for food selection, download links, and integrity rules. The fixed daily fruit allowance of 250 g refers to edible weight. The program does not predict energy requirements.

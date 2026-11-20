@@ -11,7 +11,12 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-import torch
+import numpy as np
+
+try:
+    import torch
+except ImportError:
+    torch = None
 
 import device_utils
 from cnf_data import load_cnf_data
@@ -115,6 +120,8 @@ class MealGA:
         people: list[Person],
         config: Config | None = None,
         seed: int | None = None,
+        *,
+        backend: str = "auto",
     ):
         """校验成员与候选池，并构建固定的营养、目标及UL张量。
 
@@ -124,6 +131,7 @@ class MealGA:
             people: 非空的成人成员列表，成员名称必须唯一。
             config: 算法配置；省略时使用Config默认值。
             seed: 遗传操作的随机种子；None表示不指定固定种子。
+            backend: auto优先沿用PyTorch，未安装时使用NumPy CPU。
 
         Raises:
             ValueError: 成员、候选池、营养值或设备配置不满足要求。
@@ -182,45 +190,57 @@ class MealGA:
             raise ValueError(
                 "Each mixed-food compatibility group needs at least 4 foods"
             )
+        for group in groups:
+            limits = sorted(
+                (f.max_percent for f in foods if f.role == "mixed" and f.mix_group == group),
+                reverse=True,
+            )
+            if sum(limits[:4]) < 100:
+                raise ValueError(f"Mixed-food group {group}: proportion caps cannot sum to 100% within 4 foods")
         self.factor_sum = sum(p.factor for p in people)
-        self.device = device_utils.resolve_device(self.config.device)
-        self.dtype = torch.float64
+        if backend not in {"auto", "numpy", "torch"}:
+            raise ValueError(f"Unknown scoring backend: {backend}")
+        self.backend = ("torch" if torch is not None else "numpy") if backend == "auto" else backend
+        if self.backend == "torch":
+            if torch is None:
+                raise ValueError("The torch backend requires PyTorch to be installed")
+            self.device = device_utils.resolve_device(self.config.device)
+            self.dtype = torch.float64
+        else:
+            if self.config.device not in {"cpu", "auto"}:
+                raise ValueError("NumPy only supports CPU; CUDA requires PyTorch")
+            self.device = "cpu"
+            self.dtype = np.dtype("float64")
         self.food_index = {fid: i for i, fid in enumerate(self.foods)}
         self.field_index = {name: i for i, name in enumerate(ALL_FIELDS)}
         # Missing UL fields have a separate mask. Their zeros in the arithmetic
         # matrix are only used to calculate a known lower bound, never a pass.
-        self.nutrient_matrix = torch.tensor(
-            [
-                [
-                    f.per100g.get(k) if f.per100g.get(k) is not None else 0.0
-                    for k in ALL_FIELDS
-                ]
-                for f in self.foods.values()
-            ],
-            dtype=self.dtype,
-            device=self.device,
-        )
-        self.missing_matrix = torch.tensor(
-            [
-                [f.per100g.get(k) is None for k in ALL_FIELDS]
-                for f in self.foods.values()
-            ],
-            dtype=self.dtype,
-            device=self.device,
-        )
+        self.nutrient_matrix = self._array([
+            [f.per100g.get(k) if f.per100g.get(k) is not None else 0.0 for k in ALL_FIELDS]
+            for f in self.foods.values()
+        ])
+        self.missing_matrix = self._array([
+            [f.per100g.get(k) is None for k in ALL_FIELDS] for f in self.foods.values()
+        ])
         self.nutrient_columns = [self.field_index[k] for k in NUTRIENTS]
         self.ul_columns = [self.field_index[k] for k in UL]
-        self.target_matrix = torch.tensor(
-            [[p.targets()[k] for k in NUTRIENTS] for p in self.people],
-            dtype=self.dtype,
-            device=self.device,
-        )
-        self.score_weights = torch.tensor(
-            list(WEIGHTS.values()), dtype=self.dtype, device=self.device
-        )
-        self.ul_limits = torch.tensor(
-            list(UL.values()), dtype=self.dtype, device=self.device
-        )
+        self.target_matrix = self._array([[p.targets()[k] for k in NUTRIENTS] for p in self.people])
+        self.score_weights = self._array(list(WEIGHTS.values()))
+        self.ul_limits = self._array(list(UL.values()))
+
+    def _array(self, values):
+        if self.backend == "torch":
+            return torch.tensor(values, dtype=self.dtype, device=self.device)
+        return np.asarray(values, dtype=self.dtype)
+
+    def backend_info(self) -> dict[str, str]:
+        """Return the actual evaluator and numeric environment used for output."""
+        return {
+            "framework": "pytorch" if self.backend == "torch" else "numpy",
+            "version": str(torch.__version__) if self.backend == "torch" else np.__version__,
+            "device": str(self.device),
+            "dtype": str(self.dtype),
+        }
 
     def slot_count(self, meal: int) -> int:
         """返回指定餐次的非主食槽位数：早/晚餐为n，午餐为n+1。
@@ -269,19 +289,20 @@ class MealGA:
         ]
 
     def compatible(self, ids: list[str]) -> bool:
-        """判断食材能否组成非主食组合，不检查比例和重量。
+        """判断食材能否组成非主食组合，不检查实际比例和重量。
 
         Args:
             ids: 已存在于候选池中的食材编号列表。
 
         Returns:
             单独供应项或可混合食材独立出现时为True；多种食材必须均为
-            mixed角色且属于同一个mix_group。水果和主食不作为非主食混合。
+            mixed角色且属于同一个mix_group，且比例上限之和至少100%。
+            受限食材不能单独出现；水果和主食不作为非主食混合。
         """
         fs = [self.foods[f] for f in ids]
-        return (len(fs) == 1 and fs[0].role in {"mixed", "standalone"}) or (
+        return sum(f.max_percent for f in fs) >= 100 and ((len(fs) == 1 and fs[0].role in {"mixed", "standalone"}) or (
             all(f.role == "mixed" for f in fs) and len({f.mix_group for f in fs}) == 1
-        )
+        ))
 
     def new_dish(self, meal: int) -> Dish:
         """随机创建一个符合角色兼容规则的非主食组合。
@@ -293,26 +314,33 @@ class MealGA:
             包含食材编号、比例单位和全家总重量的Dish。混合食材数由
             截断正态分布N(2.5, 1)取整得到1–4种；单独供应项固定一种。
             比例以10%为单位且总和100%，重量在0.8B–1.2B内均匀抽取。
+            只接受比例上限允许的食材组合，剩余比例仅分配给尚未达上限的食材。
         """
         first = self.rng.choice(self.sides)
         food = self.foods[first]
         if food.role == "standalone":
             ids = [first]
         else:
-            sample = self.rng.gauss(2.5, 1)
-            while not 0.5 <= sample < 4.5:
-                sample = self.rng.gauss(2.5, 1)
-            n = math.floor(sample + 0.5)
             pool = [
                 f
                 for f in self.sides
                 if self.foods[f].role == "mixed"
                 and self.foods[f].mix_group == food.mix_group
             ]
+            capacities = sorted((self.foods[f].max_percent for f in pool), reverse=True)
+            while True:
+                sample = self.rng.gauss(2.5, 1)
+                if 0.5 <= sample < 4.5:
+                    n = math.floor(sample + 0.5)
+                    if sum(capacities[:n]) >= 100:
+                        break
             ids = self.rng.sample(pool, n)
+            while not self.compatible(ids):
+                ids = self.rng.sample(pool, n)
         units = [1] * len(ids)
         for _ in range(10 - len(ids)):
-            units[self.rng.randrange(len(ids))] += 1
+            available = [i for i, fid in enumerate(ids) if units[i] < self.foods[fid].max_percent // 10]
+            units[self.rng.choice(available)] += 1
         return Dish(ids, units, self.baseline(meal) * self.rng.uniform(0.8, 1.2))
 
     def initialize(self) -> Individual:
@@ -377,8 +405,11 @@ class MealGA:
                 if fruit:
                     if any(f not in self.fruits for f in module.food_ids):
                         raise ValueError("Non-fruit in fruit module")
-                elif not self.compatible(module.food_ids):
-                    raise ValueError("Incompatible side ingredients")
+                else:
+                    if any(u * 10 > self.foods[fid].max_percent for fid, u in zip(module.food_ids, module.units)):
+                        raise ValueError("Ingredient proportion exceeds max_percent")
+                    if not self.compatible(module.food_ids):
+                        raise ValueError("Incompatible side ingredients")
             for dish in meal.dishes:
                 b = self.baseline(m)
                 if (
@@ -443,7 +474,7 @@ class MealGA:
                 yield m, "fruit", fid, meal.fruit.person_weights_g[person] * units / 10
 
     def evaluate(self, individual: Individual) -> Evaluation:
-        """通过统一的PyTorch批量评分逻辑评估单个个体。
+        """通过统一的批量评分逻辑评估单个个体。
 
         Args:
             individual: 待校验并重新计算营养的个体。
@@ -453,7 +484,7 @@ class MealGA:
         """
         return self.evaluate_population([individual])[0]
 
-    def population_weights(self, population: list[Individual]) -> torch.Tensor:
+    def population_weights(self, population: list[Individual]) -> torch.Tensor | np.ndarray:
         """校验种群并将逐人食材摄入量编码为float64张量。
 
         Args:
@@ -468,11 +499,7 @@ class MealGA:
             ValueError: 任意个体未通过合法性检查。
         """
         if not population:
-            return torch.empty(
-                (0, len(self.people), len(self.foods)),
-                dtype=self.dtype,
-                device=self.device,
-            )
+            return self._array([]).reshape(0, len(self.people), len(self.foods))
         weights = []
         for individual in population:
             self.validate(individual)
@@ -483,11 +510,10 @@ class MealGA:
                     row[self.food_index[fid]] += grams
                 members.append(row)
             weights.append(members)
-        return torch.tensor(weights, dtype=self.dtype, device=self.device)
+        return self._array(weights)
 
-    @torch.inference_mode()
     def evaluate_population(self, population: list[Individual]) -> list[Evaluation]:
-        """使用PyTorch批量计算整代营养、达标分、缺口与UL超限。
+        """批量计算整代营养、达标分、缺口与UL超限。
 
         Args:
             population: 需要重新评分的个体列表，不使用父代营养结果缓存。
@@ -507,38 +533,12 @@ class MealGA:
         if not population:
             return []
         grams = self.population_weights(population)
-        # [B, P, F] @ [F, K] -> [B, P, K]. Repeated ingredients have
-        # already been combined, so all meal/module sources contribute once.
-        known_totals = (grams / 100) @ self.nutrient_matrix
-        missing = (grams.gt(0).to(self.dtype) @ self.missing_matrix).gt(0)
-        actual = known_totals[..., self.nutrient_columns]
-        scores = torch.clamp(actual / self.target_matrix, max=1) * self.score_weights
-        deficits = torch.clamp(self.target_matrix - actual, min=0)
-        person_scores = scores.sum(dim=-1)
-        base_scores = person_scores.mean(dim=-1)
-        ul_missing = missing[..., self.ul_columns]
-        ul_excess = torch.clamp(
-            known_totals[..., self.ul_columns] / self.ul_limits - 1, min=0
-        )
-        # With incomplete data, only a known excess above the tolerance counts.
-        assessed = ~ul_missing | ul_excess.gt(EPS)
-        ul_excess = torch.where(assessed, ul_excess, 0.0)
-        total_excess = ul_excess.sum(dim=(-2, -1))
-        fitness = base_scores - self.config.excess_penalty * total_excess / len(
-            self.people
-        )
-        fully_checked = ~ul_missing.any(dim=(-2, -1))
-
-        # Convert complete batches, avoiding a device synchronization per scalar.
-        totals_cpu = known_totals.cpu().tolist()
-        missing_cpu = missing.cpu().tolist()
-        scores_cpu, deficits_cpu = scores.cpu().tolist(), deficits.cpu().tolist()
-        person_scores_cpu = person_scores.cpu().tolist()
-        ratios_cpu, assessed_cpu = ul_excess.cpu().tolist(), assessed.cpu().tolist()
-        summary_cpu = (
-            torch.stack((base_scores, fitness, total_excess), dim=-1).cpu().tolist()
-        )
-        checked_cpu = fully_checked.cpu().tolist()
+        if self.backend == "torch":
+            batch = self._torch_scores(grams)
+        else:
+            batch = self._numpy_scores(grams)
+        (totals_cpu, missing_cpu, scores_cpu, deficits_cpu, person_scores_cpu,
+         ratios_cpu, assessed_cpu, summary_cpu, checked_cpu) = batch
         evaluations = []
         for b in range(len(population)):
             results = []
@@ -579,6 +579,65 @@ class MealGA:
             )
             evaluations.append(Evaluation(results, base, fit, excess, status))
         return evaluations
+
+    def _torch_scores(self, grams):
+        """Original PyTorch float64 batch arithmetic, with no gradient tracking."""
+        with torch.inference_mode():
+            # [B, P, F] @ [F, K] -> [B, P, K]. Repeated ingredients have
+            # already been combined, so all meal/module sources contribute once.
+            known_totals = (grams / 100) @ self.nutrient_matrix
+            missing = (grams.gt(0).to(self.dtype) @ self.missing_matrix).gt(0)
+            actual = known_totals[..., self.nutrient_columns]
+            scores = torch.clamp(actual / self.target_matrix, max=1) * self.score_weights
+            deficits = torch.clamp(self.target_matrix - actual, min=0)
+            person_scores = scores.sum(dim=-1)
+            base_scores = person_scores.mean(dim=-1)
+            ul_missing = missing[..., self.ul_columns]
+            ul_excess = torch.clamp(
+                known_totals[..., self.ul_columns] / self.ul_limits - 1, min=0
+            )
+            # With incomplete data, only a known excess above the tolerance counts.
+            assessed = ~ul_missing | ul_excess.gt(EPS)
+            ul_excess = torch.where(assessed, ul_excess, 0.0)
+            total_excess = ul_excess.sum(dim=(-2, -1))
+            fitness = base_scores - self.config.excess_penalty * total_excess / len(
+                self.people
+            )
+            fully_checked = ~ul_missing.any(dim=(-2, -1))
+
+            # Convert complete batches, avoiding a device synchronization per scalar.
+            totals_cpu = known_totals.cpu().tolist()
+            missing_cpu = missing.cpu().tolist()
+            scores_cpu, deficits_cpu = scores.cpu().tolist(), deficits.cpu().tolist()
+            person_scores_cpu = person_scores.cpu().tolist()
+            ratios_cpu, assessed_cpu = ul_excess.cpu().tolist(), assessed.cpu().tolist()
+            summary_cpu = (
+                torch.stack((base_scores, fitness, total_excess), dim=-1).cpu().tolist()
+            )
+            checked_cpu = fully_checked.cpu().tolist()
+        return (totals_cpu, missing_cpu, scores_cpu, deficits_cpu, person_scores_cpu,
+                ratios_cpu, assessed_cpu, summary_cpu, checked_cpu)
+
+    def _numpy_scores(self, grams):
+        """Same batch arithmetic on CPU, including the separate missing-data mask."""
+        known_totals = (grams / 100) @ self.nutrient_matrix
+        missing = ((grams > 0).astype(self.dtype) @ self.missing_matrix) > 0
+        actual = known_totals[..., self.nutrient_columns]
+        scores = np.minimum(actual / self.target_matrix, 1) * self.score_weights
+        deficits = np.maximum(self.target_matrix - actual, 0)
+        person_scores = scores.sum(axis=-1)
+        base_scores = person_scores.mean(axis=-1)
+        ul_missing = missing[..., self.ul_columns]
+        ul_excess = np.maximum(known_totals[..., self.ul_columns] / self.ul_limits - 1, 0)
+        assessed = ~ul_missing | (ul_excess > EPS)
+        ul_excess = np.where(assessed, ul_excess, 0.0)
+        total_excess = ul_excess.sum(axis=(-2, -1))
+        fitness = base_scores - self.config.excess_penalty * total_excess / len(self.people)
+        fully_checked = ~ul_missing.any(axis=(-2, -1))
+        arrays = (known_totals, missing, scores, deficits, person_scores, ul_excess,
+                  assessed, np.stack((base_scores, fitness, total_excess), axis=-1),
+                  fully_checked)
+        return tuple(array.tolist() for array in arrays)
 
     @staticmethod
     def signature(individual: Individual) -> str:
@@ -718,6 +777,7 @@ def main() -> None:
     parser.add_argument(
         "--device", default="cpu", help="PyTorch设备：cpu、cuda、cuda:N或auto"
     )
+    parser.add_argument("--backend", choices=("auto", "numpy", "torch"), default="auto")
     parser.add_argument("--output", default="results.json")
     args = parser.parse_args()
     try:
@@ -734,7 +794,7 @@ def main() -> None:
         device=args.device,
     )
     try:
-        ga = MealGA(foods, people, config, args.seed)
+        ga = MealGA(foods, people, config, args.seed, backend=args.backend)
     except ValueError as error:
         parser.error(str(error))
     plans, history = ga.run()
@@ -742,12 +802,7 @@ def main() -> None:
         "data_metadata": metadata,
         "config": asdict(config),
         "seed": args.seed,
-        "backend": {
-            "framework": "pytorch",
-            "version": str(torch.__version__),
-            "device": str(ga.device),
-            "dtype": str(ga.dtype),
-        },
+        "backend": ga.backend_info(),
         "members": [asdict(p) for p in people],
         "history": history,
         "plans": [ga.report(ind, ev) for ind, ev in plans],
@@ -762,7 +817,7 @@ def main() -> None:
         print(
             f"食材数据：{metadata.get('source', args.foods)}，候选食材{len(foods)}种。"
         )
-    print(f"评分后端：PyTorch {torch.__version__}，设备={ga.device}，精度={ga.dtype}。")
+    print(f"Scoring backend: {ga.backend_info()}")
     for i, (_, ev) in enumerate(plans, 1):
         print(
             f"方案{i}: 家庭平均分={ev.base_score:.2f}, 适应度={ev.fitness:.2f}, UL={ev.ul_status}"
