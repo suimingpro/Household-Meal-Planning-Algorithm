@@ -11,16 +11,19 @@ if TYPE_CHECKING:
 
 
 def crossover(ga: MealGA, a: Individual, b: Individual) -> Individual:
-    """从两个父代产生一个独立子代。
-    
+    """Produce one independent child from two parents.
+
     Args:
-        ga: 提供随机数、配置及兼容规则或修复方法的MealGA上下文。
-        a: 父代A，需与父代B采用相同的成员与槽位配置。
-        b: 父代B。
-    
+        ga: MealGA context providing randomness, configuration, and compatibility
+            rules or repair methods.
+        a: Parent A; must use the same member and slot configuration as parent B.
+        b: Parent B.
+
     Returns:
-        深拷贝的子代。触发交叉时各对应组合、主食及水果模块独立
-        以50%概率继承父代之一，并修复水果重量；否则随机复制一方。
+        A deep-copied child. When crossover is triggered, each corresponding
+        combination, staple, and fruit module independently inherits from one
+        parent with 50% probability, and fruit weights are repaired. Otherwise,
+        one parent is randomly copied.
     """
     if ga.rng.random() >= ga.config.crossover_probability:
         return copy.deepcopy(ga.rng.choice([a, b]))

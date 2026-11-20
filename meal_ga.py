@@ -1,4 +1,4 @@
-"""成人家庭三餐遗传算法：组织遗传操作并使用PyTorch批量计算营养与适应度。"""
+"""Adult household three-meal genetic algorithm: organize genetic operations and use PyTorch for batch nutrient and fitness calculations."""
 
 from __future__ import annotations
 
@@ -43,20 +43,23 @@ from genetic_operators import evolution
 def load_foods(
     path: str | Path, candidates_path: str | Path | None = None
 ) -> tuple[list[Food], dict[str, Any]]:
-    """从CNF数据目录或自定义JSON文件加载候选食材。
+    """Load candidate foods from a CNF data directory or custom JSON file.
 
     Args:
-        path: CNF关系表所在目录，或包含foods和可选metadata的JSON文件。
-        candidates_path: CNF候选清单路径；省略时使用数据目录下的candidates.json。
-            读取自定义食材JSON时不能指定此参数。
+        path: Directory containing CNF relational tables, or a JSON file
+            containing foods and optional metadata.
+        candidates_path: CNF candidate-list path; defaults to candidates.json
+            in the data directory. Cannot be specified when reading custom food JSON.
 
     Returns:
-        食材对象列表与数据来源、字段映射等元信息组成的二元组。
+        A pair containing a list of food objects and metadata such as data
+        sources and field mappings.
 
     Raises:
-        OSError: 输入文件不存在或无法读取。
-        ValueError: JSON格式、CNF数据校验失败，或候选清单参数使用不当。
-        KeyError: 输入缺少必要字段。
+        OSError: An input file does not exist or cannot be read.
+        ValueError: Invalid JSON format, failed CNF data validation, or improper
+            use of the candidate-list argument.
+        KeyError: Required input fields are missing.
     """
     if Path(path).is_dir():
         rows, metadata = load_cnf_data(path, candidates_path)
@@ -68,19 +71,21 @@ def load_foods(
 
 
 def bounded_fruit_weights(values: list[float]) -> list[float]:
-    """将某位成员的三餐水果重量修复为全天250g、每餐50–150g。
+    """Repair one member's fruit weights to 250 g per day and 50–150 g per meal.
 
-    先按比例缩放到250g，再通过二分查找公共偏移量，在满足上下界的
-    同时保持总量约束。输入全为0时从三餐均分开始，不修改原列表。
+    First scale proportionally to 250 g, then find a common offset by binary
+    search to preserve the total while satisfying lower and upper bounds.
+    Start from equal meal shares if all inputs are 0. The original list is not modified.
 
     Args:
-        values: 按早、午、晚顺序排列的三个非负有限重量，单位g。
+        values: Three nonnegative finite weights in g, ordered as breakfast,
+            lunch, and dinner.
 
     Returns:
-        修复后的三个浮点重量，总量在数值精度范围内等于250g。
+        Three repaired floating-point weights totaling 250 g within numerical precision.
 
     Raises:
-        ValueError: 长度不是3，或包含负数、无穷大、NaN。
+        ValueError: Length is not 3, or values include negatives, infinity, or NaN.
     """
     if len(values) != 3 or any(not math.isfinite(x) or x < 0 for x in values):
         raise ValueError("Three finite nonnegative fruit weights required")
@@ -97,21 +102,27 @@ def bounded_fruit_weights(values: list[float]) -> list[float]:
 
 
 class MealGA:
-    """为成人家庭生成并优化一日三餐的遗传算法运行器。
+    """Genetic algorithm runner that generates and optimizes one day of three meals for an adult household.
 
-    负责输入校验、个体初始化、份量分配、PyTorch批量评分、进化流程和
-    结果组织；父代选择、幸存者选择、交叉与突变委托给genetic_operators。
-    每个实例使用独立随机数生成器，营养计算采用float64且不建立梯度图。
+    Handles input validation, individual initialization, portion allocation,
+    PyTorch batch scoring, evolution, and result organization; parent selection,
+    survivor selection, crossover, and mutation are delegated to genetic_operators.
+    Each instance uses an independent random number generator. Nutrient calculations
+    use float64 without constructing a gradient graph.
 
     Attributes:
-        config: 种群规模、代数、概率、份量和设备等运行参数。
-        rng: 由seed初始化的random.Random实例，供全部遗传操作共用。
-        people: 按输入顺序保存的成人成员列表。
-        foods: 以食材编号为键的候选食材字典。
-        device: 实际使用的PyTorch计算设备。
-        nutrient_matrix: 形状为[食材数, 营养字段数]的每100g营养矩阵。
-        missing_matrix: 与营养矩阵同形的缺失标记，用于传播UL未知状态。
-        target_matrix: 形状为[成员数, 评分营养素数]的个人每日目标矩阵。
+        config: Runtime parameters such as population size, generations,
+            probabilities, portions, and device.
+        rng: random.Random instance initialized from seed and shared by all
+            genetic operations.
+        people: Adult members in input order.
+        foods: Candidate food dictionary keyed by food code.
+        device: PyTorch computing device actually used.
+        nutrient_matrix: Per-100-g nutrient matrix shaped [food count, nutrient field count].
+        missing_matrix: Missing-value markers with the same shape as the nutrient
+            matrix, used to propagate unknown UL status.
+        target_matrix: Individual daily target matrix shaped [member count,
+            scored nutrient count].
     """
 
     def __init__(
@@ -123,18 +134,21 @@ class MealGA:
         *,
         backend: str = "auto",
     ):
-        """校验成员与候选池，并构建固定的营养、目标及UL张量。
+        """Validate members and the candidate pool, and construct fixed nutrient, target, and UL tensors.
 
         Args:
-            foods: 25–40种编号唯一的食材，包含恰好3种主食、至少2种水果。
-                每个混合兼容组至少有4种食材，评分必需营养值不能缺失。
-            people: 非空的成人成员列表，成员名称必须唯一。
-            config: 算法配置；省略时使用Config默认值。
-            seed: 遗传操作的随机种子；None表示不指定固定种子。
-            backend: auto优先沿用PyTorch，未安装时使用NumPy CPU。
+            foods: 25–40 foods with unique codes, including exactly three staples
+                and at least two fruits. Each mixing compatibility group has at
+                least four foods; nutrient values required for scoring must not be missing.
+            people: Nonempty adult member list with unique member names.
+            config: Algorithm configuration; uses Config defaults when omitted.
+            seed: Random seed for genetic operations; None means no fixed seed.
+            backend: auto prefers the existing PyTorch backend and uses NumPy CPU
+                when PyTorch is not installed.
 
         Raises:
-            ValueError: 成员、候选池、营养值或设备配置不满足要求。
+            ValueError: Members, candidate pool, nutrient values, or device
+                configuration do not meet requirements.
         """
         self.config = config or Config()
         self.rng = random.Random(seed)
@@ -243,40 +257,43 @@ class MealGA:
         }
 
     def slot_count(self, meal: int) -> int:
-        """返回指定餐次的非主食槽位数：早/晚餐为n，午餐为n+1。
+        """Return the side-dish slot count for a meal: n for breakfast/dinner, n+1 for lunch.
 
         Args:
-            meal: 餐次索引，0为早餐、1为午餐、2为晚餐。
+            meal: Meal index: 0 for breakfast, 1 for lunch, 2 for dinner.
 
         Returns:
-            该餐全家共用的非主食组合数量。
+            Number of shared household side-dish combinations for this meal.
         """
         return len(self.people) + (meal == 1)
 
     def baseline(self, meal: int) -> float:
-        """计算某餐每个非主食槽位的基准重量B，单位g。
+        """Calculate baseline weight B in g for each side-dish slot of a meal.
 
         Args:
-            meal: 餐次索引，取0、1或2。
+            meal: Meal index, 0, 1, or 2.
 
         Returns:
-            参考成人该餐预算乘以全家份量系数之和，再除以槽位数。
-            人数只通过份量系数和槽位数参与计算，不额外重复乘人数。
+            The reference adult's meal budget multiplied by the sum of household
+            portion factors, divided by slot count. Member count only enters
+            through portion factors and slot count; it is not multiplied again.
         """
         return (
             self.config.side_budgets_g[meal] * self.factor_sum / self.slot_count(meal)
         )
 
     def staple_weights(self, meal: int, food_id: str) -> list[float]:
-        """按个人碳水目标与餐次比例即时计算主食重量。
+        """Calculate staple weights immediately from individual carbohydrate targets and meal shares.
 
         Args:
-            meal: 餐次索引，取0、1或2。
-            food_id: 所选主食的食材编号，其每100g碳水含量必须大于0。
+            meal: Meal index, 0, 1, or 2.
+            food_id: Selected staple food code; its carbohydrate content per
+                100 g must be greater than 0.
 
         Returns:
-            按成员顺序排列的可食重量列表，单位g。每人重量等于每日
-            碳水目标×主食供应比例×餐次比例÷每100g碳水含量×100。
+            Edible weights in g in member order. Each person's weight equals
+            daily carbohydrate target × staple supply fraction × meal share
+            ÷ carbohydrate content per 100 g × 100.
         """
         c = self.foods[food_id].per100g["carbohydrate_g"]
         return [
@@ -289,15 +306,17 @@ class MealGA:
         ]
 
     def compatible(self, ids: list[str]) -> bool:
-        """判断食材能否组成非主食组合，不检查实际比例和重量。
+        """Determine whether foods can form a side-dish combination, without checking actual proportions or weights.
 
         Args:
-            ids: 已存在于候选池中的食材编号列表。
+            ids: List of food codes already present in the candidate pool.
 
         Returns:
-            单独供应项或可混合食材独立出现时为True；多种食材必须均为
-            mixed角色且属于同一个mix_group，且比例上限之和至少100%。
-            受限食材不能单独出现；水果和主食不作为非主食混合。
+            True for a standalone item or a mixable food appearing alone.
+            Multiple foods must all have the mixed role, belong to the same
+            mix_group, and have proportion limits summing to at least 100%.
+            Restricted foods cannot appear alone; fruit and staples are not
+            mixed as side dishes.
         """
         fs = [self.foods[f] for f in ids]
         return sum(f.max_percent for f in fs) >= 100 and ((len(fs) == 1 and fs[0].role in {"mixed", "standalone"}) or (
@@ -305,16 +324,19 @@ class MealGA:
         ))
 
     def new_dish(self, meal: int) -> Dish:
-        """随机创建一个符合角色兼容规则的非主食组合。
+        """Randomly create a side-dish combination that meets role compatibility rules.
 
         Args:
-            meal: 餐次索引，用于确定该槽位的基准重量B。
+            meal: Meal index used to determine baseline weight B for the slot.
 
         Returns:
-            包含食材编号、比例单位和全家总重量的Dish。混合食材数由
-            截断正态分布N(2.5, 1)取整得到1–4种；单独供应项固定一种。
-            比例以10%为单位且总和100%，重量在0.8B–1.2B内均匀抽取。
-            只接受比例上限允许的食材组合，剩余比例仅分配给尚未达上限的食材。
+            A Dish containing food codes, proportion units, and total household
+            weight. The mixed ingredient count is obtained by rounding a
+            truncated normal N(2.5, 1) draw to 1–4; standalone items always use one.
+            Proportions use 10% units and sum to 100%; weight is sampled uniformly
+            within 0.8B–1.2B. Only ingredient combinations permitted by proportion
+            limits are accepted; remaining proportions are allocated only to
+            ingredients that have not reached their limits.
         """
         first = self.rng.choice(self.sides)
         food = self.foods[first]
@@ -344,11 +366,13 @@ class MealGA:
         return Dish(ids, units, self.baseline(meal) * self.rng.uniform(0.8, 1.2))
 
     def initialize(self) -> Individual:
-        """生成并校验一个随机个体，不生成整个种群。
+        """Generate and validate one random individual, not the entire population.
 
         Returns:
-            含三餐的Individual。各餐独立选择主食；水果以相同概率选择
-            一种或两种，两种时各占50%，每人每天250g初始均分到三餐。
+            An Individual containing three meals. Each meal selects its staple
+            independently. One or two fruits are selected with equal probability;
+            two fruits each occupy 50%. Each person's 250 g daily fruit is
+            initially divided equally among three meals.
         """
         meals = []
         for m in range(3):
@@ -372,15 +396,17 @@ class MealGA:
         return result
 
     def validate(self, individual: Individual) -> None:
-        """检查个体的组合数量、食材角色、比例、重量和水果总量。
+        """Check an individual's combination counts, food roles, proportions, weights, and fruit totals.
 
         Args:
-            individual: 待检查的完整三餐个体；检查过程不修改其内容。
+            individual: Complete three-meal individual to check; checking does
+                not modify its contents.
 
         Raises:
-            ValueError: 餐次或槽位数量错误、编号重复或无效、食材不兼容、
-                比例不合法、非主食重量超出0.5B–1.5B，或水果不满足每人
-                全天250g及每餐50–150g的约束。
+            ValueError: Incorrect meal or slot count, duplicate or invalid codes,
+                incompatible foods, invalid proportions, side-dish weight outside
+                0.5B–1.5B, or fruit violating the per-person constraints of 250 g
+                per day and 50–150 g per meal.
         """
         if len(individual.meals) != 3:
             raise ValueError("Exactly three meals required")
@@ -431,14 +457,16 @@ class MealGA:
                 raise ValueError("Daily fruit must equal 250g per adult")
 
     def repair_fruit(self, individual: Individual) -> None:
-        """逐人原地修复三餐水果克数，保持食材编号与餐内比例。
+        """Repair each person's three-meal fruit weights in place, preserving ingredient codes and within-meal proportions.
 
         Args:
-            individual: 需要修复的个体，通常是跨餐继承水果配置后的子代。
+            individual: Individual to repair, usually a child after inheriting
+                fruit configurations across meals.
 
         Notes:
-            修复后每位成员全天水果共250g、每餐50–150g。
-            此方法仅修复重量，不负责修复其他非法编码或计算营养。
+            After repair, each member has 250 g of fruit per day and 50–150 g per
+            meal. This method only repairs weights; it does not repair other
+            invalid encodings or calculate nutrients.
         """
         for p in range(len(self.people)):
             weights = bounded_fruit_weights(
@@ -448,16 +476,18 @@ class MealGA:
                 meal.fruit.person_weights_g[p] = w
 
     def portions(self, individual: Individual, person: int):
-        """逐项生成某成员分到的主食、非主食和水果可食克数。
+        """Yield the edible grams of staples, side dishes, and fruit allocated to a member, item by item.
 
         Args:
-            individual: 包含三餐的个体。
-            person: 成员在people中的索引。
+            individual: Individual containing three meals.
+            person: Member index in people.
 
         Yields:
-            (餐次索引, 模块名称, 食材编号, 实际克数)。主食重量按公式
-            计算；共用非主食按成员E/2000占全家系数之和的比例分配；
-            水果按该成员餐次重量及食材比例分配。同一食材可多次产出。
+            (meal index, module name, food code, actual grams). Staple weights
+            follow the formula; shared side dishes are allocated in proportion
+            to the member's E/2000 relative to the sum of household factors.
+            Fruit is allocated according to the member's meal weight and
+            ingredient proportions. The same food may be yielded multiple times.
         """
         fraction = self.people[person].factor / self.factor_sum
         for m, meal in enumerate(individual.meals):
@@ -474,29 +504,32 @@ class MealGA:
                 yield m, "fruit", fid, meal.fruit.person_weights_g[person] * units / 10
 
     def evaluate(self, individual: Individual) -> Evaluation:
-        """通过统一的批量评分逻辑评估单个个体。
+        """Evaluate one individual through the shared batch-scoring logic.
 
         Args:
-            individual: 待校验并重新计算营养的个体。
+            individual: Individual to validate and recalculate nutrients for.
 
         Returns:
-            各成员营养明细、家庭基础分、适应度、归一化超限总量和UL状态。
+            Per-member nutrient details, household base score, fitness, total
+            normalized excess, and UL status.
         """
         return self.evaluate_population([individual])[0]
 
     def population_weights(self, population: list[Individual]) -> torch.Tensor | np.ndarray:
-        """校验种群并将逐人食材摄入量编码为float64张量。
+        """Validate a population and encode per-person food intakes as a float64 tensor.
 
         Args:
-            population: 待编码的个体列表，可为空。
+            population: List of individuals to encode; may be empty.
 
         Returns:
-            位于self.device、形状为[种群大小, 成员数, 食材数]的克数张量。
-            食材列顺序由food_index确定，跨餐和跨模块的同编号食材累计
-            到同一列；空种群保留成员数与食材数两个维度。
+            A gram-weight tensor on self.device, shaped [population size,
+            member count, food count]. Food column order is determined by
+            food_index. Foods with the same code across meals and modules are
+            accumulated into the same column; an empty population retains the
+            member-count and food-count dimensions.
 
         Raises:
-            ValueError: 任意个体未通过合法性检查。
+            ValueError: Any individual fails validity checks.
         """
         if not population:
             return self._array([]).reshape(0, len(self.people), len(self.foods))
@@ -513,22 +546,26 @@ class MealGA:
         return self._array(weights)
 
     def evaluate_population(self, population: list[Individual]) -> list[Evaluation]:
-        """批量计算整代营养、达标分、缺口与UL超限。
+        """Calculate nutrients, adequacy scores, deficits, and UL excess for an entire generation in batches.
 
         Args:
-            population: 需要重新评分的个体列表，不使用父代营养结果缓存。
+            population: Individuals to rescore, without using cached parent
+                nutrient results.
 
         Returns:
-            与输入顺序一致的Evaluation列表，空输入返回空列表。家庭基础分
-            为成员得分均值，适应度再减去人均归一化超限扣分。UL数据
-            不完整时保留未知状态；已知摄入下界已超限时仍判为超限。
+            Evaluation objects in input order; empty input returns an empty list.
+            The household base score is the mean member score, and fitness
+            subtracts the per-person normalized excess penalty. Incomplete UL
+            data retain unknown status; excess is still identified when the
+            known intake lower bound exceeds the limit.
 
         Raises:
-            ValueError: 任意个体未通过合法性检查。
+            ValueError: Any individual fails validity checks.
 
         Notes:
-            所有食材来源的全部营养均参与累计。计算使用float64且禁用
-            自动微分，返回普通Python对象以供选择、记录和JSON序列化。
+            All nutrients from all food sources are accumulated. Calculations
+            use float64 with automatic differentiation disabled, returning
+            ordinary Python objects for selection, recording, and JSON serialization.
         """
         if not population:
             return []
@@ -641,14 +678,15 @@ class MealGA:
 
     @staticmethod
     def signature(individual: Individual) -> str:
-        """构建用于方案去重和统计种群多样性的规范化JSON字符串。
+        """Build a normalized JSON string for plan deduplication and population diversity statistics.
 
         Args:
-            individual: 待生成签名的个体，不会被修改。
+            individual: Individual to generate a signature for; it is not modified.
 
         Returns:
-            忽略餐内组合顺序及食材排列、将重量保留两位小数的签名。
-            餐次顺序、主食类型、配比及各成员水果重量仍参与区分。
+            A signature that ignores within-meal combination order and ingredient
+            ordering and rounds weights to two decimal places. Meal order, staple
+            type, proportions, and each member's fruit weights still distinguish plans.
         """
         # Ingredient order is irrelevant; weights rounded only for diversity/deduplication.
         meals = []
@@ -668,29 +706,35 @@ class MealGA:
         return json.dumps(meals, sort_keys=True)
 
     def run(self) -> tuple[list[tuple[Individual, Evaluation]], list[dict[str, Any]]]:
-        """通过独立的evolution模块运行进化流程。
+        """Run evolution through the separate evolution module.
 
         Returns:
-            (优选方案, 逐代统计)二元组。方案为最多3个不同的
-            (Individual, Evaluation)，统计包含第0代至配置代数。
+            A (preferred plans, per-generation statistics) pair. Plans contain
+            up to three distinct (Individual, Evaluation) pairs; statistics
+            cover generation 0 through the configured generation count.
 
         Notes:
-            此方法是统一运行入口；选择、交叉、突变及逐代循环全部由
-            genetic_operators中的模块执行，使用并推进本实例的rng状态。
+            This method is the shared execution entry point. Selection, crossover,
+            mutation, and the generation loop are all performed by modules in
+            genetic_operators, using and advancing this instance's rng state.
         """
         return evolution.evolve(self)
 
     def report(self, individual: Individual, evaluation: Evaluation) -> dict[str, Any]:
-        """将方案与对应评分组织为可供JSON序列化的展示数据。
+        """Organize a plan and its corresponding evaluation as display data for JSON serialization.
 
         Args:
-            individual: 要展示的完整三餐方案。
-            evaluation: 该个体的最新评分结果，调用方需保证两者对应。
+            individual: Complete three-meal plan to display.
+            evaluation: Latest evaluation of this individual; the caller must
+                ensure that they correspond.
 
         Returns:
-            含三餐食材、全家组合克数、各成员实际克数、营养总量、目标、
-            缺口、UL检查与得分的字典。展示用整数分采用四舍五入，同时
-            保留未取整的原始分数。本方法不重新评分，也不修改原评分。
+            A dictionary containing ingredients for three meals, household
+            combination weights, each member's actual weights, nutrient totals,
+            targets, deficits, UL checks, and scores. Displayed integer scores
+            use rounding to the nearest integer with halves rounded up, while
+            retaining unrounded original scores. This method does not rescore
+            or modify the original evaluation.
         """
         meals = []
         for m, meal in enumerate(individual.meals):
@@ -753,12 +797,14 @@ class MealGA:
 
 
 def main() -> None:
-    """运行命令行入口：加载输入、执行遗传算法并写出JSON结果。
+    """Run the command-line entry point: load inputs, run the genetic algorithm, and write JSON results.
 
-    参数由argparse从命令行读取，支持指定数据集、候选池、成员文件、
-    种群规模、代数、种子、主食突变概率、计算设备与输出路径。
-    完成后向标准输出打印数据来源、PyTorch设备和各优选方案摘要。
-    输入或配置无效时由参数解析器或相应校验报告错误。
+    Arguments are read from the command line by argparse, supporting dataset,
+    candidate pool, member file, population size, generations, seed, staple
+    mutation probability, computing device, and output path. On completion,
+    print the data source, PyTorch device, and summaries of preferred plans to
+    standard output. Invalid inputs or configurations are reported by the
+    argument parser or corresponding validation.
     """
     parser = argparse.ArgumentParser(
         description="成人家庭一日三餐遗传算法（默认使用CNF 2026数据集）"

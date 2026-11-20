@@ -1,4 +1,4 @@
-"""统一测试入口：CNF数据、遗传算子、三餐约束及PyTorch评分。"""
+"""Unified test entry point: CNF data, genetic operators, three-meal constraints, and PyTorch scoring."""
 
 import copy
 import csv

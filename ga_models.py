@@ -1,18 +1,24 @@
-"""三餐规划算法共用的数据模型、营养常量与运行配置。
+"""Shared data models, nutrient constants, and runtime configuration for the three-meal planning algorithm.
 
-本模块使用标准库dataclass表示食材、成人成员、三餐编码和评分结果，
-供数据加载、遗传操作及PyTorch评分模块共用，不依赖计算设备。
+This module uses standard-library dataclasses to represent foods, adult members,
+three-meal encodings, and evaluation results, shared by data loading, genetic
+operations, and PyTorch scoring, independently of the computing device.
 
 Attributes:
-    MEALS: 早餐、午餐、晚餐的固定顺序，对应索引0、1、2。
-    CATEGORIES: 项目采用的五类食材标识，不限制实际参与累计的营养字段。
-    NUTRIENTS: 参与100分达标评分的11项营养指标及其固定顺序。
-        字段后缀g、mg、ug分别表示克、毫克、微克。
-    WEIGHTS: 各评分营养指标的权重，总和为100分。
-    UL: 题目指定的每日可耐受最高摄入量参数，单位由字段后缀确定。
-        A与叶酸的UL字段分别使用预成型A和合成叶酸，不替代充足性字段。
-    ALL_FIELDS: 能量、评分指标及UL指标去重后的有序字段集合。
-    EPS: 比较重量边界和超限程度时使用的浮点容差。
+    MEALS: Fixed breakfast, lunch, dinner order, corresponding to indices 0, 1, 2.
+    CATEGORIES: The project's five food category identifiers; these do not restrict
+        the nutrient fields actually accumulated.
+    NUTRIENTS: The 11 nutrient indicators and their fixed order in the 100-point
+        adequacy score. Field suffixes g, mg, and ug mean grams, milligrams,
+        and micrograms, respectively.
+    WEIGHTS: Weights of the scored nutrient indicators, totaling 100 points.
+    UL: Daily tolerable upper intake limit parameters specified by the assignment;
+        units are determined by field suffixes. The vitamin A and folate UL fields
+        use preformed A and synthetic folic acid, respectively, and do not replace
+        the adequacy fields.
+    ALL_FIELDS: Ordered collection of energy, scoring indicators, and UL indicators,
+        with duplicates removed.
+    EPS: Floating-point tolerance for comparing weight bounds and excess levels.
 """
 from __future__ import annotations
 
@@ -36,22 +42,28 @@ EPS = 1e-7
 
 @dataclass(frozen=True)
 class Food:
-    """一种候选食材及其每100g可食部分的营养数据。
+    """A candidate food and its nutrient data per 100 g of edible food.
 
     Attributes:
-        id: 唯一食材编号；使用CNF数据时对应Food_Code。
-        name: 展示名称，应能区分生熟及加工状态。
-        category: vegetable、starch、protein、fruit或other五种项目分类之一。
-        role: staple主食、fruit水果、mixed允许混合或standalone单独供应。
-        per100g: 营养字段到每100g含量的映射，能量单位为kcal，其余单位
-            由字段后缀确定。允许缺失的UL字段以None表示未知，不能当成0。
-        mix_group: 混合兼容组，默认savory；不同兼容组的食材不混合。
-        max_percent: 在非主食组合中的重量比例上限，默认100，按10个百分点
-            设置。低于100时必须为mixed角色，不能单独供应。
+        id: Unique food code; corresponds to Food_Code when CNF data are used.
+        name: Display name, which should distinguish raw/cooked and processing states.
+        category: One of the five project categories: vegetable, starch, protein,
+            fruit, or other.
+        role: staple for staple foods, fruit for fruit, mixed for foods that may
+            be mixed, or standalone for separately served foods.
+        per100g: Mapping from nutrient fields to amounts per 100 g. Energy is in
+            kcal; other units are determined by field suffixes. Missing UL fields
+            use None for unknown and must not be treated as 0.
+        mix_group: Mixing compatibility group, defaulting to savory; foods from
+            different compatibility groups are not mixed.
+        max_percent: Upper limit on weight proportion in a side-dish combination,
+            defaulting to 100, in increments of 10 percentage points. Values below
+            100 require the mixed role and cannot be served alone.
 
     Notes:
-        食材角色、营养完整性及兼容组校验由加载器和MealGA负责。
-        frozen只禁止重新绑定属性，不会冻结per100g字典内部的数据。
+        The loader and MealGA validate food roles, nutrient completeness, and
+        compatibility groups. frozen only prevents attribute rebinding; it does
+        not freeze data inside the per100g dictionary.
     """
 
     id: str
@@ -63,7 +75,7 @@ class Food:
     max_percent: int = 100
 
     def __post_init__(self):
-        """检查比例上限是否为10–100之间的10倍整数及角色是否可混合。"""
+        """Check that the proportion limit is an integer multiple of 10 in 10–100 and that the role allows mixing."""
         if type(self.max_percent) is not int or not 10 <= self.max_percent <= 100 or self.max_percent % 10:
             raise ValueError("max_percent must be an integer multiple of 10 in [10, 100]")
         if self.max_percent < 100 and self.role != "mixed":
@@ -72,18 +84,20 @@ class Food:
 
 @dataclass(frozen=True)
 class Person:
-    """成人成员的参考分组、体重和预先给定的每日能量需求。
+    """An adult member's reference group, body weight, and predefined daily energy requirement.
 
     Attributes:
-        name: 成员名称，家庭内的唯一性由MealGA检查。
-        age: 年龄，必须为18岁及以上的整数。
-        reference_group: male或female，用于选择模型中的营养参考目标。
-        weight_kg: 体重，单位kg，必须为正有限数。
-        energy_kcal: 输入的参考能量需求，单位kcal/天，必须为正有限数。
+        name: Member name; MealGA checks uniqueness within the household.
+        age: Age, which must be an integer of at least 18.
+        reference_group: male or female, used to select the model's nutrient targets.
+        weight_kg: Body weight in kg; must be positive and finite.
+        energy_kcal: Input reference energy requirement in kcal/day; must be
+            positive and finite.
 
     Notes:
-        本模型不预测能量需求，目标与UL使用项目指定的参数，未按年龄
-        进一步细分。年龄用于成人身份校验和结果记录。
+        This model does not predict energy requirements. Targets and ULs use
+        project-specified parameters without further age subdivision. Age is
+        used to validate adult status and record results.
     """
 
     name: str
@@ -93,11 +107,11 @@ class Person:
     energy_kcal: float
 
     def __post_init__(self):
-        """构造后检查参考分组、成人年龄、体重及能量需求。
+        """Check the reference group, adult age, body weight, and energy requirement after construction.
 
         Raises:
-            ValueError: 分组不是male/female、年龄不符合成人要求，或体重、
-                能量需求不是正有限数。
+            ValueError: The group is not male/female, age does not meet the adult
+                requirement, or weight or energy requirement is not positive and finite.
         """
         if self.reference_group not in {"male", "female"}:
             raise ValueError("reference_group must be male or female")
@@ -108,22 +122,24 @@ class Person:
 
     @property
     def factor(self) -> float:
-        """返回以2000kcal参考成人为基准的无量纲份量系数E/2000。
+        """Return the dimensionless portion factor E/2000 relative to a 2000 kcal reference adult.
 
-        该系数用于非主食预算和全家共用组合的个人份量分配。
+        This factor is used for side-dish budgets and individual portion allocation
+        of shared household combinations.
         """
         return self.energy_kcal / 2000
 
     def targets(self) -> dict[str, float]:
-        """计算此成员每日用于达标评分的营养目标。
+        """Calculate this member's daily nutrient targets for adequacy scoring.
 
         Returns:
-            按NUTRIENTS顺序构造的目标字典。碳水为E×0.55÷4 g，蛋白质
-            为0.8×体重kg g，脂肪为E×0.275÷9 g；维生素和矿物质使用
-            项目规定的固定值或male/female分组值。
+            A target dictionary constructed in NUTRIENTS order. Carbohydrate is
+            E×0.55÷4 g, protein is 0.8×body weight in kg g, and fat is E×0.275÷9 g.
+            Vitamins and minerals use project-specified fixed values or
+            male/female group values.
 
         Notes:
-            A以μg RAE计，叶酸以μg DFE计；这些充足性目标不是UL。
+            Vitamin A is in μg RAE and folate in μg DFE; these adequacy targets are not ULs.
         """
         male = self.reference_group == "male"
         return dict(zip(NUTRIENTS, (
@@ -135,24 +151,35 @@ class Person:
 
 @dataclass(frozen=True)
 class Config:
-    """遗传算法与三餐份量的不可重新赋值配置。
+    """Non-reassignable configuration for the genetic algorithm and three-meal portions.
 
     Attributes:
-        population_size: 种群规模，默认100，至少4以支持四元锦标赛。
-        generations: 初始第0代之后的进化次数，默认50。
-        elite_count: 每代直接深拷贝保留的精英数，默认2，须小于种群规模。
-        staple_fraction: 主食供应每日碳水目标的比例，默认0.8。
-        meal_shares: 主食碳水在早、午、晚餐的分配比例，默认0.25/0.4/0.35。
-        side_budgets_g: 参考成人各餐非主食预算，默认150/250/200g。
-        portion_mutation_probability: 每个非精英子代分量突变的独立概率，默认0.3。
-        crossover_probability: 每个子代执行交叉而非随机复制父代的概率，默认1。
-        staple_mutation_probability: 可选主食种类突变的独立概率，默认0。
-        excess_penalty: 人均归一化UL超限比例的适应度扣分系数，默认10。
-        device: PyTorch设备名称，默认cpu，也可用cuda、cuda:N或auto。
+        population_size: Population size, default 100; at least 4 to support
+            four-way tournaments.
+        generations: Number of evolutionary updates after initial generation 0,
+            default 50.
+        elite_count: Number of elites directly retained by deep copy each
+            generation, default 2; must be smaller than the population size.
+        staple_fraction: Fraction of the daily carbohydrate target supplied by
+            staples, default 0.8.
+        meal_shares: Staple carbohydrate shares for breakfast, lunch, and dinner,
+            default 0.25/0.4/0.35.
+        side_budgets_g: Reference adult's side-dish budget for each meal,
+            default 150/250/200 g.
+        portion_mutation_probability: Independent portion-mutation probability
+            for each non-elite child, default 0.3.
+        crossover_probability: Probability of crossover rather than randomly
+            copying a parent for each child, default 1.
+        staple_mutation_probability: Independent probability of optional
+            staple-type mutation, default 0.
+        excess_penalty: Fitness penalty coefficient for per-person normalized
+            UL excess, default 10.
+        device: PyTorch device name, default cpu; also accepts cuda, cuda:N, or auto.
 
     Notes:
-        种类突变的25%/5%/5%/5%互斥概率由mutation模块定义。
-        设备是否可用由device_utils解析，不在本数据类中检测CUDA。
+        The mutation module defines mutually exclusive ingredient-type mutation
+        probabilities of 25%/5%/5%/5%. Device availability is resolved by
+        device_utils; this data class does not check CUDA.
     """
 
     population_size: int = 100
@@ -168,12 +195,13 @@ class Config:
     device: str = "cpu"
 
     def __post_init__(self):
-        """构造后校验种群、代数、精英数、餐次比例及概率等参数。
+        """Validate population, generations, elites, meal shares, probabilities, and other parameters after construction.
 
         Raises:
-            ValueError: 种群不足4、精英数或代数越界、餐次参数不是三个
-                正有限数、分配比例之和不为1、概率不在[0, 1]，或扣分
-                系数不是非负有限数。
+            ValueError: Population below 4, elite count or generations out of
+                range, meal parameters not consisting of three positive finite
+                values, shares not summing to 1, probabilities outside [0, 1],
+                or a penalty coefficient that is not nonnegative and finite.
         """
         if self.population_size < 4 or not 0 <= self.elite_count < self.population_size:
             raise ValueError("Population >= 4 and 0 <= elite_count < population required")
@@ -193,17 +221,20 @@ class Config:
 
 @dataclass
 class Dish:
-    """一个全家共用的非主食组合，可包含混合食材或单独供应项。
+    """A shared household side-dish combination containing mixed ingredients or a standalone item.
 
     Attributes:
-        food_ids: 1–4个互不重复的食材编号，单独供应项只能有一个编号。
-        units: 与编号一一对应的整数比例单位，每单位为10%，每项至少1，
-            总和为10；单食材时为[10]。
-        weight_g: 此组合的全家可食总重量，单位g，不是每位成员的重量。
+        food_ids: 1–4 distinct food codes; standalone items allow only one code.
+        units: Integer proportion units corresponding one-to-one to the codes;
+            each unit is 10%, each entry is at least 1, and the sum is 10.
+            A single ingredient uses [10].
+        weight_g: Total edible weight of this combination for the household in g,
+            not the weight for each member.
 
     Notes:
-        个人分量按E/2000系数占全家系数之和的比例分配。
-        本类不自动校验编码，合法性由MealGA.validate检查。
+        Individual portions are allocated in proportion to each E/2000 factor
+        relative to the sum of household factors. This class does not automatically
+        validate the encoding; MealGA.validate checks validity.
     """
 
     food_ids: list[str]
@@ -213,18 +244,19 @@ class Dish:
 
 @dataclass
 class Fruit:
-    """某一餐全家共用的水果种类、配比及逐人成品可食重量。
+    """Shared household fruit types, proportions, and per-person edible prepared weights for one meal.
 
     Attributes:
-        food_ids: 1或2个互不重复的水果编号。
-        units: 对应食材的10%比例单位，总和为10；一种水果为[10]，
-            两种水果时各占2–8单位，即20%–80%。
-        person_weights_g: 按成员顺序保存的该餐水果总重量，单位g。
-            每位成员每餐50–150g，跨三餐合计250g。
+        food_ids: One or two distinct fruit codes.
+        units: Proportion units of 10% for the corresponding ingredients, summing
+            to 10. One fruit uses [10]; two fruits each use 2–8 units, or 20%–80%.
+        person_weights_g: Total fruit weights for this meal in g, in member order.
+            Each member has 50–150 g per meal and 250 g across three meals.
 
     Notes:
-        同餐所有成员使用相同水果配比，但可有不同餐次总重量。
-        重量修复和跨餐总量校验由运行器执行。
+        All members use the same fruit proportions within a meal, but may have
+        different total meal weights. The runner performs weight repair and
+        cross-meal total validation.
     """
 
     food_ids: list[str]
@@ -234,16 +266,19 @@ class Fruit:
 
 @dataclass
 class Meal:
-    """一餐的非主食组合、主食编号和水果配置。
+    """Side-dish combinations, staple code, and fruit configuration for one meal.
 
     Attributes:
-        dishes: 全家共用的非主食组合；早餐和晚餐各n个，午餐n+1个。
-        staple_id: 所选主食编号，个人主食重量按营养目标即时派生。
-        fruit: 本餐水果配置，包含食材配比及每名成员的水果克数。
+        dishes: Shared household side-dish combinations; n each for breakfast
+            and dinner, and n+1 for lunch.
+        staple_id: Selected staple code; individual staple weights are derived
+            immediately from nutrient targets.
+        fruit: This meal's fruit configuration, including ingredient proportions
+            and each member's fruit weight in grams.
 
     Notes:
-        餐次由其在Individual.meals中的位置决定，不额外保存餐次字段。
-        主食重量不作为独立基因保存。
+        The meal is determined by its position in Individual.meals; no separate
+        meal field is stored. Staple weights are not stored as independent genes.
     """
 
     dishes: list[Dish]
@@ -253,14 +288,16 @@ class Meal:
 
 @dataclass
 class Individual:
-    """遗传算法中的一个完整家庭一日三餐方案。
+    """A complete household three-meal plan for one day in the genetic algorithm.
 
     Attributes:
-        meals: 长度为3的餐次列表，依次为早餐、午餐和晚餐。
+        meals: A list of length 3, ordered as breakfast, lunch, and dinner.
 
     Notes:
-        嵌套列表和组合均可变；交叉和精英保留时须深拷贝，避免子代
-        修改父代或多个个体共享同一份编码。营养评分另存于Evaluation。
+        Nested lists and combinations are mutable. Crossover and elitism must
+        use deep copies to prevent children from changing parents or multiple
+        individuals from sharing the same encoding. Nutrient evaluations are
+        stored separately in Evaluation.
     """
 
     meals: list[Meal]
@@ -268,20 +305,25 @@ class Individual:
 
 @dataclass
 class Evaluation:
-    """一个个体的逐人营养明细、家庭适应度及UL检查结果。
+    """An individual's per-person nutrient details, household fitness, and UL checks.
 
     Attributes:
-        people: 按成员顺序保存的营养总量、目标、得分、缺口和UL检查字典。
-        base_score: 成员基础得分的算术平均，最高100分，保留浮点精度。
-        fitness: 基础分减去人均归一化超限扣分后的适应度，可为负数。
-        excess: 全家各成员各项UL的归一化超限比例之和；信息不全但
-            已知摄入下界超限时使用该下界计算。
-        ul_status: checked_no_excess表示完整检查且无超限；
-            not_fully_assessed表示无已知超限但检查不完整；
-            exceeded表示存在已知超限。
+        people: Nutrient totals, targets, scores, deficits, and UL-check
+            dictionaries, in member order.
+        base_score: Arithmetic mean of member base scores, up to 100 points,
+            retaining floating-point precision.
+        fitness: Base score minus the per-person normalized excess penalty;
+            may be negative.
+        excess: Sum of normalized excess ratios across all members and UL fields;
+            when information is incomplete but the known intake lower bound
+            exceeds the limit, that lower bound is used.
+        ul_status: checked_no_excess means fully assessed with no excess;
+            not_fully_assessed means no known excess but incomplete assessment;
+            exceeded means known excess exists.
 
     Notes:
-        不按fitness单独排序，父代及幸存者选择共用key中的UL优先规则。
+        Sorting does not use fitness alone; parent and survivor selection share
+        the UL-priority rules in key.
     """
 
     people: list[dict[str, Any]]
@@ -292,16 +334,17 @@ class Evaluation:
 
     @property
     def key(self) -> tuple[float, ...]:
-        """返回可直接按升序比较的(UL状态等级, 超限程度, 负适应度)。
+        """Return (UL status tier, excess level, negative fitness) for direct ascending comparison.
 
-        完整检查且无超限优先于检查不完整，后者优先于已知超限。
-        同等级先取归一化超限总量较小者，再取适应度较高者。
+        Fully assessed with no excess precedes incomplete assessment, which
+        precedes known excess. Within a tier, prefer a smaller total normalized
+        excess, then higher fitness.
 
         Returns:
-            三元比较键，数值越小代表方案越优。
+            A three-part comparison key; smaller values indicate better plans.
 
         Raises:
-            KeyError: ul_status不是模型支持的三个状态之一。
+            KeyError: ul_status is not one of the three states supported by the model.
         """
         # Explicitly checked safe > incomplete UL assessment > known exceedance.
         tier = {"checked_no_excess": 0, "not_fully_assessed": 1, "exceeded": 2}[self.ul_status]

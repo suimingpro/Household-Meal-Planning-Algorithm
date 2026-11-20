@@ -1,16 +1,18 @@
-"""加载CNF 2026关系表，并转换为三餐规划算法使用的候选食材数据。
+"""Load the CNF 2026 relational tables and convert them into candidate food data for the three-meal planning algorithm.
 
-依据候选清单的Food_Code关联食材名称、来源、分类及营养含量，校验
-营养素代码、单位和记录完整性。模块只读取本地数据，不下载文件，
-不执行遗传算法，也不计算个人营养得分。
+Join food names, sources, groups, and nutrient amounts using Food_Code from the
+candidate list, and validate nutrient codes, units, and record completeness.
+This module only reads local data; it does not download files, run the genetic
+algorithm, or calculate individual nutrient scores.
 
 Attributes:
-    CNF_URL: 官方数据集地址，用于记录数据来源。
-    NUTRIENT_SPECS: 程序营养字段对应的标准标签、英文名称及预期单位。
-        编号由nutrient_name.csv动态解析，A的RAE与预成型A、叶酸DFE与
-        合成叶酸分别查找，不互相替代。
-    OPTIONAL_FIELDS: 允许缺失的预成型A与合成叶酸UL专用字段。
-        缺失保留为None，不替换为0。
+    CNF_URL: Official dataset URL, used to record the data source.
+    NUTRIENT_SPECS: Standard tags, English names, and expected units for the
+        program's nutrient fields. Codes are resolved dynamically from
+        nutrient_name.csv. Vitamin A RAE and preformed A, and folate DFE and
+        synthetic folic acid, are looked up separately and do not replace one another.
+    OPTIONAL_FIELDS: UL-specific preformed A and synthetic folic acid fields
+        that may be missing. Missing values remain None rather than becoming 0.
 """
 
 from __future__ import annotations
@@ -23,8 +25,8 @@ from pathlib import Path
 from typing import Any
 
 CNF_URL = "https://open.canada.ca/data/en/dataset/1b6139bd-ed7e-4043-bc28-ff00e10f3109"
-# 字段: (标准Tagname, 标签未匹配时使用的精确英文名称, 预期单位)。
-# 这里只声明算法需要的营养语义，不固定数据集中的Nutrient_Code。
+# Field: (standard Tagname, exact English name used when the tag does not match, expected unit).
+# Only the nutrient meanings required by the algorithm are declared here, not fixed dataset Nutrient_Code values.
 NUTRIENT_SPECS = {
     "energy_kcal": ("ENERC_KCAL", "Energy (kilocalories)", "kilocalorie"),
     "carbohydrate_g": ("CHOCDF", "Carbohydrate, total (by difference)", "Gram"),
@@ -45,22 +47,26 @@ OPTIONAL_FIELDS = {"preformed_a_ug", "synthetic_folic_acid_ug"}
 
 
 def csv_rows(path: Path, required: set[str]):
-    """按行读取CSV，在开始迭代时检查必需列是否齐全。
+    """Read a CSV row by row, checking required columns when iteration begins.
 
     Args:
-        path: 待读取的CSV文件路径，支持UTF-8 BOM及CRLF换行。
-        required: 必须出现在表头中的列名集合；空集合表示不要求特定列。
+        path: Path of the CSV file to read; supports UTF-8 BOM and CRLF line endings.
+        required: Set of column names that must appear in the header; an empty
+            set means no specific columns are required.
 
     Yields:
-        csv.DictReader生成的原始行字典，以列名为键，不转换营养数值。
+        Raw row dictionaries produced by csv.DictReader, keyed by column name,
+        without converting nutrient values.
 
     Raises:
-        OSError: 文件不存在、无读取权限或发生其他文件读取错误。
-        ValueError: 表头缺少required指定的列。
+        OSError: The file does not exist, read access is denied, or another file
+            reading error occurs.
+        ValueError: The header lacks columns specified by required.
 
     Notes:
-        此函数是生成器，读取及校验在迭代期间执行；使用流式读取避免
-        将整张营养含量表同时加载到内存，结束迭代后关闭文件。
+        This function is a generator; reading and validation occur during
+        iteration. Streaming avoids loading the entire nutrient amount table
+        into memory at once, and the file is closed after iteration ends.
     """
     with path.open(encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -73,23 +79,25 @@ def csv_rows(path: Path, required: set[str]):
 
 
 def indexed_rows(path: Path, key: str, required: set[str]) -> dict[str, dict[str, str]]:
-    """读取CSV，并以指定列建立唯一记录索引。
+    """Read a CSV and build a unique-record index using the specified column.
 
     Args:
-        path: 待读取的CSV文件路径。
-        key: 用作索引键的列名，例如Food_Code或Nutrient_Code。
-        required: 除索引列以外还必须存在的列名集合。
+        path: Path of the CSV file to read.
+        key: Column name used as the index key, such as Food_Code or Nutrient_Code.
+        required: Set of column names required in addition to the index column.
 
     Returns:
-        索引值到原始行字典的映射。索引键移除首尾空白，行内容保留原值。
+        A mapping from index values to raw row dictionaries. Index keys have
+        leading and trailing whitespace removed; row contents retain their original values.
 
     Raises:
-        OSError: 文件无法读取。
-        ValueError: 缺少必要列，或索引键为空、重复。
+        OSError: The file cannot be read.
+        ValueError: Required columns are missing, or index keys are empty or duplicated.
 
     Notes:
-        此函数将整张表加载到内存，适用于食材名称、来源、分类及营养素
-        名称等索引表；大型营养含量表由load_cnf_data流式筛选。
+        This function loads the entire table into memory and is suitable for
+        index tables such as food names, sources, groups, and nutrient names.
+        The large nutrient amount table is filtered by streaming in load_cnf_data.
     """
     result = {}
     for row in csv_rows(path, {key} | required):
@@ -101,30 +109,32 @@ def indexed_rows(path: Path, key: str, required: set[str]) -> dict[str, dict[str
 
 
 def _normalize_label(value: str | None) -> str:
-    """忽略标签或名称的大小写及多余空白，None规范化为空字符串。"""
+    """Ignore case and excess whitespace in tags or names; normalize None to an empty string."""
     return " ".join((value or "").split()).casefold()
 
 
 def resolve_nutrient_map(
     nutrient_names: dict[str, dict[str, str]],
 ) -> dict[str, tuple[str, str]]:
-    """依据数据表的标准标签或精确英文名称动态查找营养素编号。
+    """Dynamically look up nutrient codes by standard tags or exact English names in the data table.
 
     Args:
-        nutrient_names: 以Nutrient_Code为键的原始营养素记录。每条记录
-            需有Nutrient_Unit，并提供Tagname或Nutrient_Name_EN供匹配。
+        nutrient_names: Raw nutrient records keyed by Nutrient_Code. Each record
+            must have Nutrient_Unit and provide Tagname or Nutrient_Name_EN for matching.
 
     Returns:
-        程序字段到(数据集营养素编号, 数据集单位)的映射。
+        A mapping from program fields to (dataset nutrient code, dataset unit).
 
     Raises:
-        ValueError: 标签与名称均无法匹配、同一匹配项存在多个编号、
-            单位不符，或多个程序指标解析到了同一编号。
+        ValueError: Neither tag nor name matches, multiple codes match the same
+            item, units differ, or multiple program indicators resolve to the same code.
 
     Notes:
-        优先精确匹配Tagname；没有标签匹配时回退到英文名称。匹配忽略
-        大小写和多余空白，不使用包含或模糊匹配，避免混淆RAE与Retinol、
-        DFE与Folic acid，以及维生素D的μg与IU。匹配后再独立检查单位。
+        Exact Tagname matching takes priority; when no tag matches, fall back
+        to the English name. Matching ignores case and excess whitespace and
+        does not use substring or fuzzy matching, to avoid confusing RAE with
+        Retinol, DFE with Folic acid, or vitamin D in micrograms with IU.
+        Units are checked independently after matching.
     """
     resolved = {}
     used_codes = {}
@@ -159,37 +169,46 @@ def resolve_nutrient_map(
 def load_cnf_data(
     directory: str | Path, candidates_path: str | Path | None = None
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """按候选清单关联CNF关系表，提取每100g可食部分的营养与来源信息。
+    """Join CNF relational tables using the candidate list to extract nutrients per 100 g of edible food and source information.
 
     Args:
-        directory: 包含food_name.csv、food_source.csv、cnf_food_group.csv、
-            nutrient_name.csv及nutrient_amount.csv的CNF数据目录。
-        candidates_path: 候选清单JSON路径；省略时读取directory下的
-            candidates.json。清单的foods列表需包含25–40个唯一food_code，
-            各条目提供name、category、role，以及可选的description_en、
-            mix_group、max_percent。max_percent表示非主食重量比例上限，
-            默认100。description_en存在且非空时须与原始食材描述一致。
+        directory: CNF data directory containing food_name.csv, food_source.csv,
+            cnf_food_group.csv, nutrient_name.csv, and nutrient_amount.csv.
+        candidates_path: Path to the candidate-list JSON; when omitted, read
+            candidates.json in directory. The foods list must contain 25–40
+            unique food_code values. Each entry provides name, category, role,
+            and optional description_en, mix_group, and max_percent.
+            max_percent is the upper limit on the side-dish weight proportion,
+            defaulting to 100. If description_en is present and nonempty, it
+            must match the original food description.
 
     Returns:
-        (foods, metadata)二元组：foods按候选清单顺序保存食材字典，包含
-        id、name、category、role、mix_group及per100g，可用于构造Food对象；
-        metadata记录官方来源、候选路径、原始食材和营养记录、字段映射
-        及所有输入文件的SHA-256校验值。此函数不直接创建Food实例。
+        A (foods, metadata) pair: foods contains food dictionaries in candidate-list
+        order, with id, name, category, role, mix_group, and per100g, suitable for
+        constructing Food objects. metadata records the official source,
+        candidate path, original food and nutrient records, field mappings,
+        and SHA-256 checksums of all input files. This function does not directly
+        create Food instances.
 
     Raises:
-        OSError: 已存在的输入文件无法读取。
-        ValueError: 文件缺失、JSON无效、候选数量不符、编号或营养记录重复、
-            食材描述不匹配、单位不符、必需营养字段缺失，或数值为负、
-            非有限值、无法转换为浮点数。
-        KeyError: 候选清单或候选条目缺少必要字段。
+        OSError: An existing input file cannot be read.
+        ValueError: Missing files, invalid JSON, incorrect candidate count,
+            duplicate codes or nutrient records, mismatched food descriptions
+            or units, missing required nutrient fields, or values that are
+            negative, non-finite, or cannot be converted to floats.
+        KeyError: Required fields are missing from the candidate list or an entry.
 
     Notes:
-        营养素编号先按标准标签、再按精确英文名称从营养素名称表解析，
-        不固定编号。营养记录空白或缺省表示未知，数值0保留为真实零。评分必需字段
-        缺失时拒绝加载；预成型A与合成叶酸允许为None。现有关系表无法
-        完整识别维生素E的UL适用形式与来源，因此ul_applicable_e_mg固定
-        保留为None，不以总α-生育酚替代。食材分类和角色取自项目候选
-        清单，后续由MealGA检查其取值与组合兼容性。
+        Nutrient codes are resolved from the nutrient name table first by
+        standard tag, then by exact English name; codes are not fixed.
+        Blank or omitted nutrient records mean unknown; numeric 0 remains a
+        true zero. Loading is rejected when required scoring fields are missing;
+        preformed A and synthetic folic acid may be None. The existing relational
+        tables cannot fully identify the forms and sources of vitamin E to which
+        the UL applies, so ul_applicable_e_mg always remains None and is not
+        replaced by total alpha-tocopherol. Food categories and roles come from
+        the project's candidate list; MealGA subsequently checks their values
+        and combination compatibility.
     """
     directory = Path(directory)
     candidates_path = (

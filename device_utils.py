@@ -1,4 +1,4 @@
-"""PyTorch设备解析与CUDA可用性检查，独立于三餐规划及遗传算法。"""
+"""PyTorch device resolution and CUDA availability checks, independent of meal planning and the genetic algorithm."""
 
 from __future__ import annotations
 
@@ -9,16 +9,17 @@ except ImportError:
 
 
 def resolve_device(name: str) -> torch.device:
-    """解析并检查支持float64的CPU或CUDA设备。
+    """Resolve and check a CPU or CUDA device that supports float64.
 
     Args:
-        name: cpu、cuda、cuda:N或auto；auto优先选可用CUDA，否则选CPU。
+        name: cpu, cuda, cuda:N, or auto; auto prefers available CUDA, otherwise CPU.
 
     Returns:
-        可供张量创建使用的torch.device对象。
+        A torch.device object that can be used to create tensors.
 
     Raises:
-        ValueError: 设备名称无效、不受支持、CUDA不可用或GPU编号越界。
+        ValueError: Invalid or unsupported device name, unavailable CUDA, or an
+            out-of-range GPU index.
     """
     if torch is None:
         raise ValueError("PyTorch is not installed; use the NumPy CPU backend")

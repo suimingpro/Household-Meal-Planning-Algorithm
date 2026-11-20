@@ -1,4 +1,4 @@
-"""进化流程：组织幸存者选择、父代选择、交叉、突变与逐代统计。"""
+"""Evolution workflow: organize survivor selection, parent selection, crossover, mutation, and per-generation statistics."""
 from __future__ import annotations
 
 import copy
@@ -13,20 +13,25 @@ if TYPE_CHECKING:
 
 
 def evolve(ga: MealGA) -> tuple[list[tuple[Individual, Evaluation]], list[dict[str, Any]]]:
-    """执行初始化、逐代评分、精英保留和非精英子代繁衍。
+    """Perform initialization, per-generation scoring, elitism, and non-elite offspring reproduction.
 
     Args:
-        ga: 提供初始化、评分、合法性检查、配置及实例随机数生成器的运行器。
+        ga: Runner providing initialization, scoring, validity checks,
+            configuration, and an instance random number generator.
 
     Returns:
-        (优选方案, 逐代统计)二元组。优选方案为历代最多3个签名不同的
-        (Individual, Evaluation)，按UL优先比较规则排序；统计包含
-        第0代至配置代数的最优分、平均分、超限比例和多样性。
+        A (preferred plans, per-generation statistics) pair. Preferred plans are
+        up to three (Individual, Evaluation) pairs with distinct signatures
+        across generations, ordered by the UL-priority comparison rules.
+        Statistics include best score, mean score, excess fraction, and diversity
+        from generation 0 through the configured generation count.
 
     Notes:
-        每代精英直接深拷贝；每对父代来自两轮独立四元锦标赛，并生成
-        两个独立子代，直到下一代达到配置规模。末尾仅需一个时截断。
-        本方法会推进实例的rng状态，再次调用不会自动重置随机种子。
+        Elites are directly deep-copied each generation. Each parent pair comes
+        from two independent four-way tournaments and produces two independent
+        children until the next generation reaches its configured size; truncate
+        if only one is needed at the end. This method advances the instance's
+        rng state; calling it again does not automatically reset the random seed.
     """
     population = [ga.initialize() for _ in range(ga.config.population_size)]
     history = []

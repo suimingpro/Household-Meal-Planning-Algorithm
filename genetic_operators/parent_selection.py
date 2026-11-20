@@ -8,16 +8,18 @@ from ga_models import Evaluation, Individual
 
 def select_parent(population: list[Individual], evaluations: list[Evaluation],
                   rng: random.Random, tournament_size: int = 4) -> Individual:
-    """通过锦标赛选择一个父代，默认抽取4个不同候选。
-    
+    """Select a parent by tournament, drawing four distinct candidates by default.
+
     Args:
-        population: 待选择的种群。
-        evaluations: 与种群等长且顺序对应的最新评分结果。
-        rng: 执行无放回抽样的实例随机数生成器。
-        tournament_size: 每轮候选数量，默认4；种群至少包含该数量个体。
-    
+        population: Population to select from.
+        evaluations: Latest evaluations with the same length and order as the population.
+        rng: Instance random number generator performing sampling without replacement.
+        tournament_size: Number of candidates per round, default 4; the population
+            must contain at least this many individuals.
+
     Returns:
-        四个不同候选中按UL优先规则选出的最优父代引用，不作深拷贝。
+        A reference to the best parent among four distinct candidates under
+        UL-priority rules, without a deep copy.
     """
     if len(population) != len(evaluations):
         raise ValueError("Population and evaluations must have equal lengths")

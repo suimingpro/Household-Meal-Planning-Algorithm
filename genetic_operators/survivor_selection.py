@@ -1,9 +1,11 @@
-"""按UL优先规则选择直接进入下一代的精英幸存者。
+"""Select elite survivors that enter the next generation directly under UL-priority rules.
 
-本模块与父代选择共用Evaluation.key比较规则：完整检查且无超限优先，
-其次为无已知超限但检查不完整，最后为已知超限；同等级先比较归一化
-超限总量，再比较适应度。选择结果深拷贝，不修改原种群或重新计算评分。
-下一代的其他位置由进化模块通过交叉、突变产生的子代填充。
+This module shares Evaluation.key comparison rules with parent selection:
+fully assessed with no excess first, then no known excess but incomplete
+assessment, and finally known excess. Within a tier, compare total normalized
+excess, then fitness. Selection results are deep-copied without modifying the
+original population or recalculating scores. The evolution module fills the
+remaining next-generation positions with offspring produced by crossover and mutation.
 """
 from __future__ import annotations
 
@@ -13,41 +15,50 @@ from ga_models import Evaluation, Individual
 
 
 def rank_population(evaluations: list[Evaluation]) -> list[int]:
-    """按UL状态、超限程度和适应度返回从优到劣的个体索引。
+    """Return individual indices from best to worst by UL status, excess level, and fitness.
 
     Args:
-        evaluations: 与种群位置对应的最新评分结果列表，可为空。
+        evaluations: Latest evaluations corresponding to population positions;
+            may be empty.
 
     Returns:
-        按Evaluation.key升序排列的索引列表，空输入返回空列表。
-        比较键相同时保留原有顺序，不修改输入评分列表。
+        Indices in ascending Evaluation.key order; empty input returns an empty
+        list. Equal comparison keys retain their original order. The input
+        evaluation list is not modified.
 
     Notes:
-        使用评分对象的key属性，不按基础分或适应度单独排序。
+        Uses the evaluation object's key property, not base score or fitness alone.
     """
     return sorted(range(len(evaluations)), key=lambda i: evaluations[i].key)
 
 
 def select_survivors(population: list[Individual], evaluations: list[Evaluation],
                      count: int) -> list[Individual]:
-    """选取最优count个精英并深拷贝，供下一代直接保留。
+    """Select and deep-copy the best count elites for direct retention in the next generation.
 
     Args:
-        population: 当前种群，包含待选择的个体。
-        evaluations: 与种群等长且顺序一一对应的最新评分结果。
-        count: 需要保留的精英数量，应为0到种群大小之间的整数。
+        population: Current population containing individuals to select from.
+        evaluations: Latest evaluations with the same length and one-to-one
+            order as the population.
+        count: Number of elites to retain; should be an integer from 0 to the
+            population size.
 
     Returns:
-        按优劣顺序排列的精英副本列表；count为0时返回空列表。
-        每个个体及其嵌套组合、比例和水果重量均深拷贝，修改返回结果
-        不会影响原种群，也不会让多个副本共享原个体的可变编码。
+        Elite copies ordered from best to worst; returns an empty list when
+        count is 0. Each individual and its nested combinations, proportions,
+        and fruit weights are deep-copied. Modifying returned results does not
+        affect the original population or cause multiple copies to share the
+        original individual's mutable encoding.
 
     Raises:
-        ValueError: 种群与评分列表长度不同，或count超出允许范围。
+        ValueError: Population and evaluation list lengths differ, or count is
+            outside the allowed range.
 
     Notes:
-        此函数只负责精英保留，不执行交叉、突变或营养评分；调用方应
-        保证评分对应当前个体，并在后续繁衍中跳过这些精英。
+        This function only retains elites; it does not perform crossover,
+        mutation, or nutrient scoring. The caller should ensure that evaluations
+        correspond to current individuals and skip these elites during subsequent
+        reproduction.
     """
     if len(population) != len(evaluations):
         raise ValueError("Population and evaluations must have equal lengths")

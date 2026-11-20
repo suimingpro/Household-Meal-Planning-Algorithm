@@ -10,28 +10,32 @@ if TYPE_CHECKING:
 
 
 def modules(individual: Individual) -> list[Dish | Fruit]:
-    """返回可参与非主食或水果突变的模块引用列表。
-    
+    """Return references to modules that can participate in side-dish or fruit mutation.
+
     Args:
-        individual: 要遍历的个体。
-    
+        individual: Individual to traverse.
+
     Returns:
-        按餐次依次排列的全部Dish与Fruit对象，主食不包含在内。
-        列表中的对象仍属于原个体，修改它们会直接修改该个体。
+        All Dish and Fruit objects in meal order, excluding staples.
+        Objects in the list still belong to the original individual; modifying
+        them directly modifies that individual.
     """
     return [module for meal in individual.meals for module in [*meal.dishes, meal.fruit]]
 
 
 def mutate_staple(ga: MealGA, individual: Individual) -> None:
-    """按配置概率原地执行一次可选的主食种类突变。
-    
+    """Perform one optional staple-type mutation in place with the configured probability.
+
     Args:
-        ga: 提供随机数、配置及兼容规则或修复方法的MealGA上下文。
-        individual: 允许修改的非精英子代。
-    
+        ga: MealGA context providing randomness, configuration, and compatibility
+            rules or repair methods.
+        individual: Non-elite child that may be modified.
+
     Notes:
-        触发时随机改变一餐的主食编号。主食克数是派生值，下次计算
-        时随编号按公式重算，不产生独立重量基因。默认概率为0。
+        When triggered, randomly change one meal's staple code. Staple weights
+        are derived values and are recalculated from the code using the formula
+        at the next calculation; no independent weight gene is produced.
+        The default probability is 0.
     """
     if ga.rng.random() < ga.config.staple_mutation_probability:
         meal = ga.rng.choice(individual.meals)
@@ -40,16 +44,20 @@ def mutate_staple(ga: MealGA, individual: Individual) -> None:
 
 def replacement_pool(ga: MealGA, module: Dish | Fruit, slot: int,
                      same_category: bool = False) -> list[str]:
-    """筛选指定食材位置可用的替代编号，不修改组合。
-    
+    """Filter replacement codes for a specified ingredient slot without changing the combination.
+
     Args:
-        ga: 提供随机数、配置及兼容规则或修复方法的MealGA上下文。
-        module: 待替换食材所在的非主食组合或水果模块。
-        slot: 模块内食材位置的索引。
-        same_category: 是否额外要求替代品与原食材属于同一大类。
-    
+        ga: MealGA context providing randomness, configuration, and compatibility
+            rules or repair methods.
+        module: Side-dish combination or fruit module containing the ingredient
+            to replace.
+        slot: Index of the ingredient position within the module.
+        same_category: Whether to additionally require replacements to belong
+            to the same broad category as the original ingredient.
+
     Returns:
-        保持角色及混合兼容性、不会引入重复编号的候选食材列表。
+        Candidate foods that preserve role and mixing compatibility without
+        introducing duplicate codes.
     """
     old = ga.foods[module.food_ids[slot]]
     pool = ga.fruits if isinstance(module, Fruit) else ga.sides
@@ -71,16 +79,18 @@ def replacement_pool(ga: MealGA, module: Dish | Fruit, slot: int,
 
 
 def mutate_kind(ga: MealGA, individual: Individual) -> str:
-    """按互斥概率原地尝试一次种类突变。
-    
+    """Attempt one ingredient-type mutation in place using mutually exclusive probabilities.
+
     Args:
-        ga: 提供随机数、配置及兼容规则或修复方法的MealGA上下文。
-        individual: 允许修改的非精英子代。
-    
+        ga: MealGA context providing randomness, configuration, and compatibility
+            rules or repair methods.
+        individual: Non-elite child that may be modified.
+
     Returns:
-        抽中的事件名：same_category、copy_other、delete、add或none。
-        对应概率为25%、5%、5%、5%、60%；抽中但无法执行时保持原样，
-        仍返回抽中的事件名。主食不参加这些事件。
+        The selected event name: same_category, copy_other, delete, add, or none.
+        Their probabilities are 25%, 5%, 5%, 5%, and 60%, respectively. If a
+        selected event cannot be executed, leave the individual unchanged but
+        still return that event's name. Staples do not participate in these events.
     """
     draw = ga.rng.random()
     event = "same_category" if draw < .25 else "copy_other" if draw < .30 else (
@@ -139,16 +149,18 @@ def mutate_kind(ga: MealGA, individual: Individual) -> str:
 
 
 def mutate_portions(ga: MealGA, individual: Individual) -> str:
-    """独立于种类突变，按配置概率原地尝试一次分量突变。
-    
+    """Attempt one portion mutation in place with the configured probability, independently of ingredient-type mutation.
+
     Args:
-        ga: 提供随机数、配置及兼容规则或修复方法的MealGA上下文。
-        individual: 允许修改的非精英子代。
-    
+        ga: MealGA context providing randomness, configuration, and compatibility
+            rules or repair methods.
+        individual: Non-elite child that may be modified.
+
     Returns:
-        side_ratio、side_weight、fruit_ratio、fruit_transfer之一；
-        未触发时返回none。默认触发概率30%，操作从当前可执行类别
-        中随机选择，保持比例、克数边界及每人水果全天总量。
+        One of side_ratio, side_weight, fruit_ratio, or fruit_transfer;
+        returns none when not triggered. The default trigger probability is 30%.
+        The operation is randomly selected from currently executable categories,
+        preserving proportion and weight bounds and each person's daily fruit total.
     """
     if ga.rng.random() >= ga.config.portion_mutation_probability:
         return "none"
