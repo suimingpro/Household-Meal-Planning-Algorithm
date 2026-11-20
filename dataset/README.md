@@ -1,46 +1,46 @@
-# CNF 2026 数据集
+# CNF 2026 Dataset
 
-程序默认从本目录加载食材与营养数据，按 `Food_Code` 和 `Nutrient_Code` 连接关系表。食材候选池由 `candidates.json` 显式选取30个条目，可修改为25–40个条目。
+The program loads food and nutrient data from this directory by default, joining relational tables through `Food_Code` and `Nutrient_Code`. The candidate pool explicitly selects 30 records through `candidates.json` and can be changed to contain 25-40 records.
 
-## 数据来源
+## Data Sources
 
-[Health Canada：Canadian Nutrient File 2026](https://open.canada.ca/data/en/dataset/1b6139bd-ed7e-4043-bc28-ff00e10f3109)。原始CSV保留官方内容，遵循数据集页面列出的 Open Government Licence – Canada。
+[Health Canada: Canadian Nutrient File 2026](https://open.canada.ca/data/en/dataset/1b6139bd-ed7e-4043-bc28-ff00e10f3109). The original CSV files retain their official content and are subject to the Open Government Licence - Canada listed on the dataset page.
 
-原有文件：
+Original local files:
 
-- `food_name.csv`：食材名称及编号。
-- `food_source.csv`：食材来源说明。
-- `cnf_food_group.csv`：CNF原始食材类别。
+- `food_name.csv`: food names and codes.
+- `food_source.csv`: food source descriptions.
+- `cnf_food_group.csv`: original CNF food groups.
 
-本次补齐的官方文件：
+Additional official files:
 
-- [nutrient_name.csv：营养素代码、名称与单位](https://open.canada.ca/data/dataset/1b6139bd-ed7e-4043-bc28-ff00e10f3109/resource/e0aca283-16b5-4eba-a54a-4994490a3262/download/nutrient_name.csv)
-- [nutrient_amount.csv：食材每100g可食部分的营养含量](https://open.canada.ca/data/dataset/1b6139bd-ed7e-4043-bc28-ff00e10f3109/resource/0ff718fc-1133-4154-80c5-3d619e6c63be/download/nutrient_amount.csv)
+- [nutrient_name.csv: nutrient codes, names, and units](https://open.canada.ca/data/dataset/1b6139bd-ed7e-4043-bc28-ff00e10f3109/resource/e0aca283-16b5-4eba-a54a-4994490a3262/download/nutrient_name.csv)
+- [nutrient_amount.csv: nutrient amounts per 100 g of edible food](https://open.canada.ca/data/dataset/1b6139bd-ed7e-4043-bc28-ff00e10f3109/resource/0ff718fc-1133-4154-80c5-3d619e6c63be/download/nutrient_amount.csv)
 
-这些数据在2026-11-05从官方地址下载。程序运行时只读取本地文件，不需要联网，也不会自动回退到演示数据。
+These files were downloaded from the official sources on 2026-11-05. The program reads local files at runtime, requires no network access, and does not automatically fall back to demonstration data.
 
-## 候选清单
+## Candidate List
 
-每个条目包含 `food_code`、中文 `name`、项目 `category`、`role`、原始 `description_en`，以及可选的 `mix_group`。营养值不在候选清单中重复保存；代码按食材编号从原表读取。`description_en` 用于检查编号与预期食材是否一致，防止生熟状态或条目选错。
+Each entry contains `food_code`, a Chinese display `name`, the project's `category` and `role`, the original `description_en`, and an optional `mix_group`. Nutrient values are not duplicated in this list; they are read from the original tables by food code. `description_en` verifies that the code matches the intended food and preparation state.
 
-默认三种主食为：
+The three default staples are:
 
-| CNF编号 | 食材 |
+| CNF code | Food |
 | --- | --- |
-| 4523 | 熟长粒白米饭 |
-| 4066 | 市售白面包 |
-| 4458 | 强化熟鸡蛋面 |
+| 4523 | Cooked long-grain white rice |
+| 4066 | Commercial white bread |
+| 4458 | Cooked enriched egg noodles |
 
-项目的五种食材分类与CNF官方分组分别保留，不将二者直接等同。例如，CNF将土豆与非淀粉蔬菜放在同一个大组，项目清单则显式将土豆设为 `starch`。牛奶、酸奶设为 `standalone`。
+The project's five food categories are kept separate from official CNF groups. For example, CNF places potatoes and non-starchy vegetables in the same broad group, while the project's candidate list explicitly assigns potatoes to `starch`. Milk and yogurt are assigned the `standalone` role.
 
-所有重量均匹配条目所述的可食状态：例如水煮菠菜用水煮沥干后的重量，生黄瓜用可食生重。算法不会模拟额外烹调损失。
+Weights must match the edible state described by the food record. For example, boiled spinach uses its weight after boiling and draining, while raw cucumber uses edible raw weight. The algorithm does not simulate additional cooking losses.
 
-## 字段与完整性
+## Fields and Data Integrity
 
-营养指标声明见 `cnf_data.NUTRIENT_SPECS`，只保存所需的标准标签、精确英文名称和预期单位，不固定营养素编号。加载时由 `resolve_nutrient_map()` 优先匹配 `nutrient_name.csv` 的 `Tagname`；没有标签匹配时回退到 `Nutrient_Name_EN`。匹配忽略大小写及多余空白，不使用模糊匹配。找不到指标、出现多个匹配编号或单位错误时会明确报错。
+Nutrient requirements are declared in `cnf_data.NUTRIENT_SPECS`, which stores standard tags, exact English names, and expected units rather than fixed numeric codes. During loading, `resolve_nutrient_map()` first matches `Tagname` in `nutrient_name.csv`, falling back to `Nutrient_Name_EN` when no tag matches. Matching ignores case and extra whitespace and does not use fuzzy matching. Missing nutrients, multiple matching codes, or incorrect units cause explicit errors.
 
-例如，蛋白质由 `PROCNT` / `Protein` 识别；A达标使用 `VITA_RAE`，上限使用 `RETOL`；叶酸达标使用 `FOLDFE`，上限使用 `FOLAC`；D使用 `VITD`（μg），不使用 `VITD_IU`。当前CNF 2026的编号仍会解析为原来的203、320、319等，但两张营养表的编号同步变化后，无需修改加载器。
+For example, protein is identified by `PROCNT` / `Protein`; vitamin A adequacy uses `VITA_RAE`, while its UL uses `RETOL`; folate adequacy uses `FOLDFE`, while its UL uses `FOLAC`; vitamin D uses `VITD` in micrograms rather than `VITD_IU`. The current CNF 2026 data still resolves to codes such as 203, 320, and 319. If codes change consistently in both nutrient tables, the loader does not need to be modified.
 
-必需的评分字段缺失时明确报错，数值0与缺失值分开处理。UL专用的预成型A和合成叶酸允许缺失并标记未能评估。当前文件不能完整识别维生素E的UL适用形式与来源，因此 `ul_applicable_e_mg` 保留未知；不会将总α-生育酚或添加α-生育酚直接替代它。
+Missing required scoring fields cause explicit errors. Recorded zeros are distinguished from missing values. The UL-specific preformed vitamin A and synthetic folic acid fields may be missing, in which case assessment is incomplete. These tables cannot fully identify the forms and sources of vitamin E to which the UL applies, so `ul_applicable_e_mg` remains unknown. Total or added alpha-tocopherol is not substituted for it.
 
-结果的 `data_metadata` 保存每个入选条目的CNF名称、官方分类、来源、更新日期、营养记录来源代码、动态解析后的营养素编号/单位/标签/名称及输入文件SHA-256，便于核对与复现。
+The output's `data_metadata` retains each selected food's CNF description, official group, source, update date, nutrient record source codes, dynamically resolved nutrient codes/units/tags/names, and SHA-256 hashes of the input files for verification and reproducibility.
